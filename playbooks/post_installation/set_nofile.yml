@@ -1,0 +1,22 @@
+---
+- name: Set Up nofile value
+  hosts: all
+  gather_facts: yes
+  vars:
+    # Change the values if required, although with caution
+    soft_nofile: 65535
+    hard_nofile: 65535
+
+  tasks:
+  - name: Set default max open files for users
+    copy:
+      content: |-
+        # This file is being maintained by Ansible.
+        # DO NOT EDIT
+        #        
+        * soft nofile {{ soft_nofile }}
+        * hard nofile {{ hard_nofile }}
+      dest: /etc/security/limits.d/00-nofile.conf
+      owner: root
+      group: root
+      mode: '0644'

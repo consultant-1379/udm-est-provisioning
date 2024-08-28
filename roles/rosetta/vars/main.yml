@@ -1,0 +1,51 @@
+---
+#
+#   ROSETTA MODULE VARS FILE
+# 
+#   provider:
+#    vdc_shared, vdc_udm, vdc_estudm, e2c_lmvl 
+
+#   rosetta_infratype:
+#
+#     DEV ENVIRONMENTS;
+#
+#       5g_dev_vm_small         CPU:4	 RAM: 16	Disk: 64
+#       5g_dev_vm_small_extra   CPU:4	 RAM: 32	Disk: 64
+#       5g_dev_vm_medium        CPU:6	 RAM: 32	Disk: 64
+#       5g_dev_vm_large         CPU:8	 RAM: 32	Disk: 64
+#
+#     Traffic Generators;
+#
+#       5g_tg_vm_small         CPU:4	 RAM: 16	Disk: 64
+#       5g_tg_vm_small_extra	 CPU:4	 RAM: 32	Disk: 64
+#       5g_tg_vm_medium        CPU:6	 RAM: 32	Disk: 64
+#       5g_tg_vm_large         CPU:8	 RAM: 32	Disk: 64
+
+#   tenant:
+#    shared
+#    udm
+#    e2c
+
+rosetta_infratype:  "{{ vm_infratype | default ('5g_tg_vm_small') }}" 
+
+rosetta_owner:      "eudm5gest1"
+rosetta_team:       "5G_EST"
+rosetta_team_admin: "5G_EST"
+rosetta_ndo:        "5G_Program"
+
+rosetta_additional_info_list:
+  - sudoers:        "{{ rosetta_owner   |   default ('unasigned') }}" 
+  - provider:       "vdc_{{ org_name    |   default ('estudm')           | lower }}" 
+  - tenant:         "{{ hydra_tmpl_name_to_tenant [hydra_tmpl_name]   | default ('udm') }}"
+  - jira:           "{{ jira_id      |   default ('none') }}" 
+  - revision:       "{{ vm_revision  |   default ('V3') }}"
+  - ipv6_support:   false
+  - HydraSyncSTatus: "The syncronization with hydra is updated"
+
+hydra_tmpl_name_to_tenant:
+  udm5gEST_udm_vdc_438:             udm         #   10.210.121.1/24
+  udm5gEST_udm_vdc_468:             udm         #   150.132.165.129/25
+  udm5gEST_shared_vdc_122:          shared      #   10.120.19.1/24
+  udm5gEST_shared_vdc_137:          shared      #   10.210.33.1/24
+  udm5gEST_shared_vdc_170:          shared      #   10.210.36.129/25
+  udm5gEST_shared_vdc_339:          shared      #   10.210.63.129/25

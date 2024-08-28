@@ -1,0 +1,42 @@
+---
+  # Task list: query_specific_vapp.yml
+  # - Depends on:
+  #   - vapp_name
+  #   - extra_filter_parameters
+  #
+  # - Provides:
+  #   - query_specific_vapp_result
+  #
+  # - Description:
+  #   Set of tasks to query VMware API for specific vApp.
+  #   Customizable filter options, can be tailored for specific use.
+  #
+
+  - name: VMware vCloud API query - check for specific vApp
+    uri:
+      url: "{{ api_host_vmware }}/api/query?type=vApp&filter=(name=={{ vapp_name | urlencode }}{{ extra_filter_parameters | default('') }})"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+      method: GET
+      return_content: yes
+      dest: "{{ tmp_dir }}/query_specific_vapp.xml"
+      status_code: 200
+    register: query_specific_vapp
+
+  - debug:
+      var: query_specific_vapp.content
+      verbosity: 3
+
+  - name: Extract vApp record href
+    xml_read:
+      xmlfile: "{{ tmp_dir }}/query_specific_vapp.xml"
+      xpath: "/n:QueryResultRecords/n:VAppRecord/@href"
+      namespaces: "n=http://www.vmware.com/vcloud/v1.5"
+    register: query_specific_vapp_result
+
+  - debug:
+      var: query_specific_vapp_result.value
+      verbosity: 3
+

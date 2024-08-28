@@ -1,0 +1,41 @@
+iface lo inet loopback
+auto lo
+
+{% for item in template_item %}
+auto {{ item.1 }}
+
+{%- if item.0.ip_address_v4 is defined %}
+
+iface {{ item.1 }} inet static
+  mtu {{ mtu | default ('1500')}}
+  address {{ item.0.ip_address_v4 | ipv4('address') }}
+  netmask {{ item.0.ip_address_v4 | ipv4('netmask') }}
+{% for item_routes in template_routes %}
+{% if item.0.ip_address_v4 | ipv4('network/prefix') == item_routes.network %}
+{% for destination in item_routes.routes %}
+  post-up route add -net {{ destination.dest_network }}  netmask {{ destination.dest_mask }} gw {{ item_routes.gateway }}
+  pre-down route del -net {{ destination.dest_network }}  netmask {{ destination.dest_mask }} gw {{ item_routes.gateway }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{%- if item.0.ip_address_v6 is defined %}
+
+iface {{ item.1 }} inet6 static
+  mtu {{ mtu | default ('1500')}}
+  address {{ item.0.ip_address_v6 | ipv6('address') }}
+  netmask {{ item.0.ip_address_v6 | ipv6('prefix') }}
+{% for item_routes in template_routes %}
+{% if item.0.ip_address_v6 | ipv6('network/prefix') == item_routes.network %}
+{% for destination in item_routes.routes %}
+  post-up route -A inet6 add {{ destination.dest_network }} gw {{ item_routes.gateway }}
+  post-down route -A inet6 del {{ destination.dest_network }} gw {{ item_routes.gateway }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% endfor %}
+dns-search {{ ansible_dns.search.0 }}
+dns-nameservers {{ ansible_dns.nameservers.0 }} {{ ansible_dns.nameservers.1 }}

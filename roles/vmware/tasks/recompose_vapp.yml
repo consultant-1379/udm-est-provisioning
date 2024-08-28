@@ -1,0 +1,60 @@
+---
+  # Task list: recompose_vapp.yml
+  # - Depends on:
+  #   - xml/recomposeVApp.xml
+  #     - template_vm_href
+  #     - template_vm_name
+  #
+  # - Provides: vm_href
+  #
+  # - Description:
+  #   Set of tasks necessary to recompose deployed vApp.
+  #   Outputs newly added VM href (needed for rest of 'update' playbook operations)
+  #
+
+  - name: Prepare template for vApp recompose
+    template:
+      src: "{{ playbook_dir }}/xml/recomposeVAppParams.xml"
+      dest: "{{ tmp_dir }}/recomposeVAppParams.xml"
+
+  - name: Recompose vApp
+    uri:
+      url: "{{ query_specific_vapp_result.value }}/action/recomposeVApp"
+      body: "{{ lookup('template', tmp_dir + '//recomposeVAppParams.xml') }}"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+        Content-Type: "application/vnd.vmware.vcloud.recomposeVAppParams+xml"
+      method: POST
+      return_content: yes
+      dest: "{{ tmp_dir }}/recompose_vapp.xml"
+      status_code: 202
+    register: recompose_vapp
+
+  - debug:
+      var: recompose_vapp.content
+      verbosity: 3
+
+  - name: Extract vApp recompose task
+    xml_read:
+      xmlfile: "{{ tmp_dir }}/recompose_vapp.xml"
+      xpath: "/n:Task/@href"
+      namespaces: "n=http://www.vmware.com/vcloud/v1.5"
+    register: recompose_vapp_task
+    failed_when: recompose_vapp_task.value == ""
+
+  - name: Wait until vApp is recomposed
+    uri:
+      url: "{{ recompose_vapp_task.value }}"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+      method: GET
+      return_content: yes
+    register: recompose_vapp_task_result
+    until: recompose_vapp_task_result.content.find("status=\"success\"") != -1
+    retries: "{{ vdc_retries }}"
+    delay: "{{ vdc_delay }}"
+

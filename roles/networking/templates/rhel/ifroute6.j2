@@ -1,0 +1,7 @@
+{% for item in template_routes %}
+{% if template_network_address_ipv6 == item.network %}
+{% for destination in item.routes %}
+{{ destination.dest_network }} via {{ item.gateway }} dev {{ template_interface }} metric 1024 pref medium
+{% endfor %}
+{% endif %}
+{% endfor %}

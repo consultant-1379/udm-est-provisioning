@@ -1,0 +1,144 @@
+---
+  # Task list: pxe_config.yml
+  # - Depends on:
+  #   - api_host_pxe
+  #   - vm_mac_address
+  #   - vm_computer_name
+  #   - os_profile
+  #
+  # - Provides:
+  #   - pxe_config_{{ os_profile }}
+  #
+  # - Description:
+  #   Set of tasks to configure PXE server based on provided (VM) MAC address.
+  #   Currently, two OS installations are supported:
+  #     - Ubuntu
+  #     - RHEL
+  #     - SLES
+
+  ###  Ubuntu PXE settings
+
+  - name: Execute PXE config for Ubuntu installation
+    uri:
+      url: "{{ api_host_pxe }}:8000/mac"
+      body: >-
+        mac={{ vm_mac_address.value[0] }}&data=profile_home=lxgen
+        profile=eis-eis-ubuntu-{{ os_version }}
+        hostname={{ vm_computer_name }}
+        e_fact_groups=base,auth,afs,secnfs
+        e_fact_profile={{ vm_profile }}-UDM-Base
+        e_fact_site={{ vdc_site }}
+        e_puppet_server=puppet.{{ vdc_site | lower }}.gic.ericsson.se
+        e_puppet_caserver=puppetca.{{ vdc_site | lower }}.gic.ericsson.se
+        e_software={{ vm_software }}
+        e_puppet_no_csr=true
+        e_postscript_step1=seli-clean-puppetcert.sh
+        e_fact_team=lxuxops
+        e_partitioning={{ vm_partitioning }}
+        e_puppet_environment={{ vm_environment }}
+        ksdevice=bootif
+        ks=http://lxgen.{{ vdc_site | lower }}.gic.ericsson.se/gssprofiles/ubuntu/EIS-UBUNTU-{{ os_version }}/profile/EIS-UBUNTU-{{ os_version }}.php
+        e_rootpassword={{ default_root_password_hash }}
+      method: POST
+      status_code: 200
+      return_content: yes
+    vars:
+      vm_software:      "small"
+      vm_partitioning:  "lvmext4"
+      vm_profile:       "PDU"
+      vm_environment:   "production"
+    register: pxe_config_ubuntu
+    when: os_profile == "ubuntu"
+
+  - debug:
+      var: pxe_config_ubuntu.content
+      verbosity: 3
+    when: os_profile == "ubuntu"
+
+  ###  RHEL PXE settings
+
+  - set_fact:
+      os_major_version: "{{ os_version.split('.')[0] }}"
+      os_minor_version: "{{ os_version.split('.')[1] }}"
+    when: os_profile == "rhel" and (os_version | length > 2)
+
+  - set_fact:
+      os_major_version: "{{ os_version }}"
+    when: os_profile == "rhel" and (os_version | length == 1)
+
+  - name: Execute PXE config for RHEL installation
+    uri:
+      url: "{{ api_host_pxe }}:8000/mac"
+      body: >-
+        mac={{ vm_mac_address.value[0] }}&data=profile_home=lxgen
+        profile=eis-eis-rhel{{ os_major_version }}
+        hostname={{ vm_computer_name }}
+        e_fact_groups=base,auth,afs,secnfs
+        e_fact_profile={{ vm_profile }}-UDM-Base
+        e_fact_site={{ vdc_site }}
+        e_puppet_server=puppet.{{ vdc_site | lower }}.gic.ericsson.se
+        e_puppet_caserver=puppetca.{{ vdc_site | lower }}.gic.ericsson.se
+        e_software={{ vm_software }}
+        e_puppet_no_csr=true
+        e_postscript_step1=seli-clean-puppetcert.sh
+        e_fact_team=lxuxops
+        e_partitioning={{ vm_partitioning }}
+        e_puppet_environment={{ vm_environment }}
+        kernel=rhel{{ os_version }}-64/vmlinuz
+        initrd=rhel{{ os_version }}-64/initrd.img
+        ksdevice=bootif
+        {{ 'e_minorrelease='+os_minor_version if os_minor_version is defined else '' }}
+        ks=http://lxgen.{{ vdc_site | lower }}.gic.ericsson.se/gssprofiles/redhat/EIS-RHEL{{ os_major_version }}/profile/EIS-RHEL{{ os_major_version }}.php{{ '?e_minorrelease='+os_minor_version if os_minor_version is defined else '' }}
+        e_rootpassword={{ default_root_password_hash }}
+      method: POST
+      status_code: 200
+      return_content: yes
+    register: pxe_config_rhel
+    when: os_profile == "rhel"
+    vars:
+      vm_software:      "small"
+      vm_partitioning:  "lvmext4"
+      vm_profile:       "PDU"
+      vm_environment:   "production"
+
+  - debug:
+      var: pxe_config_rhel.content
+      verbosity: 3
+    when: os_profile == "rhel"
+
+  ###  SLES PXE settings
+
+  - name: Execute PXE config for SLES installation
+    uri:
+      url: "{{ api_host_pxe }}:8000/mac"
+      body: >-
+        mac={{ vm_mac_address.value[0] }}&data=profile_home=lxgen
+        profile=eis-eis-sles{{ os_version }}
+        hostname={{ vm_computer_name }}
+        e_fact_groups=base,auth,afs,secnfs
+        e_fact_profile={{ vm_profile }}-UDM-Base
+        e_fact_site={{ vdc_site }}
+        e_software={{ vm_software }}
+        e_partitioning={{ vm_partitioning }}
+        e_fact_team=lxuxops
+        e_puppet_no_csr=true
+        e_puppet_environment={{ vm_environment }}
+        e_puppet_server=puppet.{{ vdc_site | lower }}.gic.ericsson.se
+        e_puppet_caserver=puppetca.{{ vdc_site | lower }}.gic.ericsson.se
+        e_postscript_step1=seli-clean-puppetcert.sh
+        e_rootpassword={{ default_root_password_hash }}
+      method: POST
+      status_code: 200
+      return_content: yes
+    vars:
+      vm_software:      "small"
+      vm_partitioning:  "lvmext4"
+      vm_profile:       "PDU"
+      vm_environment:   "production"
+    register: pxe_config_sles
+    when: os_profile == "sles"
+
+  - debug:
+      var: pxe_config_sles.content
+      verbosity: 3
+    when: os_profile == "sles"

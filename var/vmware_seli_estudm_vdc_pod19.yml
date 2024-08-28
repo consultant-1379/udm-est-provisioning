@@ -1,0 +1,29 @@
+---
+# vCloud connection data for Shared VDC
+org_name:      "estudm"
+vdc_name:      "UDM 5G SELIPOD19-vdc"
+vdc_retries: 30
+vdc_delay: 30
+vdc_site: "SELI"
+
+#catalog_name: "udmvm_template"
+
+api_host_pxe:    "http://api.lxgen.{{ vdc_site | lower }}.gic.ericsson.se"
+api_host_vmware: "https://vcloud.{{ vdc_site | lower }}.gic.ericsson.se"
+api_host_hydra:  "https://hydra.gic.ericsson.se"
+
+# Correspondence between Hydra Networks and ESTUDM VDC Networks
+
+hydra_to_vdc:
+   # 5G SELIPOD19-vdc - MGMT
+   "UDM GIC POD mgmt 5G external":          "108-UDM GIC POD mgmt 5G external"
+   "UDM GIC POD mgmt 5G development":       "109-UDM GIC POD mgmt 5G development"
+   "UDM VDC SELIPOD19 management":          "110-UDM VDC SELIPOD19 management"
+   "UDM PDU Pod Hypervisor Management":     "118-UDM PDU Pod Hypervisor Management"
+   "UDM GIC POD mgmt_2":                    "119-UDM GIC POD mgmt_2"
+   "UDM GIC POD mgmt CUDB":                 "120-UDM GIC POD mgmt CUDB"
+   # 5G SELIPOD19-vdc - Traffic
+   "UDM VDC SELIPOD19 OAM":                 "114-UDM VDC SELIPOD19 OAM"
+   "UDM VDC SELIPOD19 PROV":                "115-UDM VDC SELIPOD19 PROV"
+   "UDM VDC SELIPOD19 DATA":                "116-UDM VDC SELIPOD19 DATA"
+   "UDM VDC SELIPOD19 SIG":                 "117-UDM VDC SELIPOD19 SIG"

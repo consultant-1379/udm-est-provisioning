@@ -1,0 +1,40 @@
+---
+# vCloud connection data for ESTUDM VDC - UDM SELIPOD3-vdc
+org_name:      "estudm"
+vdc_name:      "UDM SELIPOD3-vdc"
+vdc_retries: 30
+vdc_delay: 30
+vdc_site: "SELI"
+
+#catalog_name: "udmvm_template"
+
+api_host_pxe:    "http://api.lxgen.{{ vdc_site | lower }}.gic.ericsson.se"
+api_host_vmware: "https://vcloud.{{ vdc_site | lower }}.gic.ericsson.se"
+api_host_hydra:  "https://hydra.gic.ericsson.se"
+
+# Correspondence between Hydra Networks and ESTUDM VDC Networks
+
+hydra_to_vdc:
+    "UDM GIC 5G OAM EDN":                      "113-UDM GIC 5G OAM EDN"
+    "UDM 5G SIG CN E2C POD3":                  "119-UDM 5G SIG CN E2C POD3"
+    "UDM 5G SIG DATA E2C POD3":                "120-UDM 5G SIG DATA E2C POD3"
+    "UDM 5G OAM E2C POD3":                     "121-UDM 5G OAM E2C POD3"
+    "UDM 5G management E2C POD3 third":        "122-UDM 5G management E2C POD3 third"
+    "UDM 5G PROVISIONING E2C POD3":            "124-UDM 5G PROVISIONING E2C POD3"
+    "UDM SELIPOD3 management":                 "132-UDM SELIPOD3 management"
+    "UDM SELIPOD3 raddia":                     "133-UDM SELIPOD3 raddia"
+    "UDM 5G management E2C POD3 4th":          "134-UDM 5G management E2C POD3 4"
+    "UDM SELIPOD3 OAM":                        "135-UDM SELIPOD3 OAM"
+    "UDM SELIPOD3 management_2":               "142-UDM SELIPOD3 management_2"
+    "UDM SELIPOD3 management_3":               "143-UDM SELIPOD3 management_3"
+    "UDM SELIPOD3 management_5":               "180-UDM SELIPOD3 management_5"
+    "UDM SELIPOD3 OAM_2":                      "186-UDM SELIPOD3 OAM_2"
+    "UDM SELIPOD3 SIG DATA":                   "188-UDM SELIPOD3 SIG DATA"
+    "UDM SELIPOD3 management_6":               "190-UDM SELIPOD3 management_6"
+    "UDM 5G SIG CN E2C POD3_2":                "193-UDM 5G SIG CN E2C POD3_2"
+    "UDM GIC POD mgmt EIR_2":                  "196-UDM GIC POD mgmt EIR_2"
+    "UDM GIC POD SIG2 EIR_2":                  "197-UDM GIC POD SIG2 EIR_2"
+    "UDM GIC POD SIG EIR_2":                   "198-UDM GIC POD SIG EIR_2"
+    "UDM GIC POD ldap EIR_2":                  "199-UDM GIC POD ldap EIR_2"
+    "UDM SIG DATA E2C POD3":                   "211-UDM SIG DATA E2C POD3"
+    "UDM SELIPOD3 management_7":               "213-UDM SELIPOD3 management_7"

@@ -1,0 +1,17 @@
+---
+- name: Disable Puppet Agent
+  hosts: all
+  gather_facts: yes
+  tasks:
+
+  - name: "Disable puppet agent to maintain sudo and logrotate configs"
+    shell:
+      cmd: puppet agent --disable "disable due to conflict with ansible managed configurations"
+      creates: /var/lib/puppet/state/agent_disabled.lock
+ 
+  - name: "Disable puppet in cron to maintain sudo and logrotate configs"
+    lineinfile:
+      path: /var/spool/cron/crontabs/root
+      regexp: "[Pp]uppet"
+      state: absent
+      backup: yes

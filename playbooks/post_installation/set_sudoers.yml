@@ -1,0 +1,52 @@
+---
+- name: Set Up Sudoers
+  hosts: all
+  gather_facts: yes
+  vars:
+    sudoers: eudm5gest1
+
+  tasks:
+  - name: Set up sudoers file configuration
+    lineinfile:
+      path: "/etc/sudoers"
+      line: "#includedir /etc/sudoers.d"
+      insertafter: EOF
+
+  - name: Create a directory if it does not exist
+    file:
+      path: /etc/sudoers.d
+      state: directory
+      owner: root
+      group: root
+
+  - name: Add udmadm sudoers file
+    copy:
+      content: |
+        %udmadp ALL=(root) ALL
+      dest: "/etc/sudoers.d/10_udmadm"
+      owner: root
+      group: root
+      mode: 0440
+    validate: 'visudo -cf %s'
+
+  - name: Add estudm5g sudoers file
+    copy:
+      content: |
+        %estudm5g ALL=(root) ALL
+      dest: "/etc/sudoers.d/10_estudm5g"
+      owner: root
+      group: root
+      mode: 0440
+    validate: 'visudo -cf %s'
+
+  - name: Add specific users to the sudoers file
+    copy:
+      content: |
+        User_Alias USERS = {{ sudoers }}
+        USERS ALL=(root) ALL
+      dest: "/etc/sudoers.d/10_users"
+      owner: root
+      group: root
+      mode: 0440
+    validate: 'visudo -cf %s'
+    when: sudoers is defined

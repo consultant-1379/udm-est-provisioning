@@ -1,0 +1,57 @@
+---
+  # Task list: query_specific_orgnetwork.yml
+  # - Depends on:
+  #   - is
+  #
+  # - Provides:
+  #   - vdc_networks_vmware_ids
+  #
+  # - Description:
+  #   Set of tasks to query VMware API for specific Org network (basically, where to connect VM to).
+  #   Customizable filter options, can be tailored for specific use.
+  #
+
+  - name: VMware vCloud API query - Org network
+    uri:
+      url: "{{ api_host_vmware }}/api/query?type=orgVdcNetwork&filter=(name=={{ vdc_network_name | urlencode }}{{ extra_filter_parameters | default('') }})"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+      method: GET
+      return_content: yes
+      dest: "{{ tmp_dir }}/query_{{ vdc_network_name | urlencode }}_orgnetwork.xml"
+      status_code: 200
+    register: vdc_network_query
+
+  - debug:
+      var: vdc_network_query.content
+      verbosity: 3
+
+  - name: Extract vApp network href
+    xml_read:
+      xmlfile: "{{ tmp_dir }}/query_{{ vdc_network_name | urlencode }}_orgnetwork.xml"
+      xpath: "/n:QueryResultRecords/n:OrgVdcNetworkRecord/@href"
+      namespaces: "n=http://www.vmware.com/vcloud/v1.5"
+    register: vdc_network_query_result
+
+  - debug:
+      var: vdc_network_query_result.value
+      verbosity: 3
+
+  - assert:
+      that:
+        - vdc_network_query_result.value != ""
+      msg: "Could not find {{ vdc_network_name }}  Org Network! Check your input data..."
+
+  - set_fact:
+      vdc_networks_vmware_ids: [] 
+    when: vdc_networks_vmware_ids is not defined
+
+  - name: Add network VM ID to list of list of networks.
+    set_fact:
+      vdc_networks_vmware_ids: "{{ vdc_networks_vmware_ids }} + [ '{{ vdc_network_query_result.value [-36:] }}' ]"
+
+  - debug:
+      var: vdc_networks_vmware_ids
+      verbosity: 3

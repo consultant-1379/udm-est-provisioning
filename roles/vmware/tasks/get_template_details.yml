@@ -1,0 +1,30 @@
+---
+  # Task list: get_template_details.yml
+  # - Depends on:
+  #   - query_specific_template_result
+  #
+  # - Provides:
+  #   - vapp_template_details.xml
+  #
+  # - Description:
+  #   Set of tasks to get vApp template details.
+  #
+
+  - name: Get vApp template details
+    uri:
+      url: "{{ query_specific_template_result.value }}"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+        Content-Type: "application/vnd.vmware.vcloud.vm+xml"
+      method: GET
+      return_content: yes
+      status_code: 200
+      dest: "{{ tmp_dir }}/vapp_template_details.xml"
+    register: get_template_details
+
+  - debug:
+      var: get_template_details.content
+      verbosity: 3
+

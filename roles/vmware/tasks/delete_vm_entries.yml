@@ -1,0 +1,23 @@
+---
+
+  # Get VM details
+  - include_tasks: get_vms_details.yml
+
+  # Delete CI entry(-ies) in Hydra
+  - include_role:
+      name: hydra
+      tasks_from: hydra_ci_delete
+
+  # Clear PXE configuration(s)
+  - include_role:
+      name: pxe
+      tasks_from: pxe_check_delete
+
+#   Disabled for network functions playbooks testing
+
+  # Delete CI entry(-ies) in Rosetta
+  - include_role:
+      name: rosetta
+      tasks_from: rosetta_ci_delete
+    vars:
+      vm_computer_name: "{{ vm_name.value }}"

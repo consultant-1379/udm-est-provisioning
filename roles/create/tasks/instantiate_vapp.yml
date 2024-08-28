@@ -1,0 +1,107 @@
+---
+
+  # Query for Org VDC link (where to deploy)
+  - include_role:
+      name: vmware
+      tasks_from: query_specific_orgvdc
+    vars:
+      extra_filter_parameters: ";isBusy==false;isEnabled==true"
+    when:
+  - assert:
+      that:
+        - query_specific_orgvdc_result.value != ""
+      msg: "Could not find specified Org VDC! Check your input data..."
+
+  # Query for vApp template link (what to deploy)
+  - include_role:
+      name: vmware
+      tasks_from: query_specific_template
+    vars:
+      extra_filter_parameters: ";isBusy==false;status==RESOLVED;vdcName=={{ vdc_name | urlencode }}"
+  - assert:
+      that:
+        - query_specific_template_result.value != ""
+      msg: "Could not find specified vApp template! Check your input data..."
+
+  # Query Hydra CI
+  - include_role:
+      name: hydra
+      tasks_from: hydra_ci_template_query
+
+  - include_role:
+      name: vmware
+      tasks_from: query_set_of_orgnetworks
+    vars:
+      vdc_network_name: "{{ item.vdc_network_name }}"
+      extra_filter_parameters: ";vdcName=={{ vdc_name | urlencode }}"
+    with_items: "{{ vdc_networks }}"
+
+  - set_fact:
+      vm_list: []
+    when: vm_list is not defined
+
+  # Create Hydra CI
+  - include_role:
+      name: hydra
+      tasks_from: hydra_ci_create
+
+  - debug:
+      var: vdc_networks_vmware_ids
+      verbosity: 3      
+
+  - debug:
+      var: vdc_networks
+      verbosity: 3
+
+  # vApp deploy
+  - include_role:
+      name: vmware
+      tasks_from: deploy_vapp
+  - assert:
+      that:
+        - vm_href.value != ""
+      msg: "Could not get VM href from instantiated vApp!"
+
+  # Update VM computer name
+  - include_role:
+      name: vmware
+      tasks_from: update_vm_computer_name
+
+  # Update VM name
+  - include_role:
+      name: vmware
+      tasks_from: update_vm_name
+
+  # Update VM IP address
+  - include_role:
+      name: vmware
+      tasks_from: update_vm_ip_address
+
+  # Update CI MAC address
+  - include_role:
+      name: hydra
+      tasks_from: hydra_mac_update
+
+  # VM deployed and fully configured, prep for OS installation
+  - include_role:
+      name: pxe
+      tasks_from: pxe_check_delete
+
+  # Execute PXE configuration
+  - include_role:
+      name: pxe
+      tasks_from: pxe_config.yml
+
+  # Power ON VM
+  - include_role:
+      name: vmware
+      tasks_from: powerOn_vm
+
+  - set_fact:
+      vm_list:  "{{ vm_list + [ vm_computer_name ] }}"
+
+  # Create Rosetta CI
+
+  - include_role:
+      name: rosetta
+      tasks_from: rosetta_ci_create

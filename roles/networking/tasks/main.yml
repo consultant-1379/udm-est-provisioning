@@ -1,0 +1,15 @@
+# - Depends on:
+#   - vm_computer_name
+--- 
+
+- include_tasks: netconfig_sles.yml
+  when: ansible_distribution == "SLES"
+
+- debug:
+    msg: "{{ ansible_distribution_version }}"
+
+- include_tasks: "netconfig_ubuntu_{{ ansible_distribution_version }}.yml"
+  when: ansible_distribution == "Ubuntu"
+
+- include_tasks: netconfig_rhel.yml
+  when: ansible_distribution == "RedHat"

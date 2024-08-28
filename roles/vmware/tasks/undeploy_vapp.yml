@@ -1,0 +1,62 @@
+---
+
+  # Task list: undeploy_vapp.yml
+  # - Depends on:
+  #   - query_specific_vapp_result
+  #
+  # - Provides: none
+  #
+  # - Description:
+  #   Set of tasks necessary to undeploy vApp and track progress.
+  #
+
+  - name: Ready template
+    template:
+      src: "{{ playbook_dir }}/xml/actionUndeploy.xml"
+      dest: "{{ tmp_dir }}/actionUndeploy.xml"
+
+  - name: Undeploy vApp
+    uri:
+      url: "{{ query_specific_vapp_result.value }}/action/undeploy"
+      body: "{{ lookup('template', tmp_dir + '/actionUndeploy.xml') }}"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        Content-Type: "application/vnd.vmware.vcloud.undeployVAppParams+xml"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+      method: POST
+      return_content: yes
+      dest: "{{ tmp_dir }}/undeploy_vapp.xml"
+      status_code: 202
+    register: undeploy_vapp
+
+  - debug:
+      var: undeploy_vapp.content
+      verbosity: 3
+
+  - name: Extract undeploy task href
+    xml_read:
+      xmlfile: "{{ tmp_dir }}/undeploy_vapp.xml"
+      xpath: "/n:Task/@href"
+      namespaces: "n=http://www.vmware.com/vcloud/v1.5"
+    register: undeploy_vapp_task
+    failed_when: undeploy_vapp_task.value == ""
+
+  - debug:
+      var: undeploy_vapp_task.value
+      verbosity: 3
+
+  - name: Wait until vApp is undeployed
+    uri:
+      url: "{{ undeploy_vapp_task.value }}"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+      method: GET
+      return_content: yes
+    register: undeploy_vapp_task_result
+    until: undeploy_vapp_task_result.content.find("status=\"success\"") != -1
+    retries: "{{ vdc_retries }}"
+    delay: "{{ vdc_delay }}"
+

@@ -1,0 +1,38 @@
+---
+- name: Check Hydra Templates
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    debug:    False
+    vm_count: 1
+    vm_type: tg
+    hydra_templates_list: "{{ hydra_templates[vm_type][vdc_site | lower] }}"
+
+  tasks:
+    - set_fact:
+        templates_ok: []
+
+    - set_fact: 
+        hydra_ipv4_exhausted_networks: []
+    
+    - name: Include playbook vars
+      include_vars: vars/main.yaml
+      no_log: "{{ debug }}"
+
+    - name: Check Hydra templates (main playbook)
+      include_tasks: hydra_template_check.yml
+      vars:
+        hydra_tmpl_name: "{{ template }}"
+      loop: "{{ hydra_templates_list }}"
+      loop_control:
+        loop_var: template
+      no_log: "{{ debug }}"
+
+    - name: "Display the list of Hydra templates that can allocate {{ vm_count }} VMs of type {{ vm_type }}"
+      debug:
+        var: templates_ok
+
+    - name: "Display the list of Hydra Networks that are exhausted."
+      debug:
+        var: hydra_ipv4_exhausted_networks

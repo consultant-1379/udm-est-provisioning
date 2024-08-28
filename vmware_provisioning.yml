@@ -1,0 +1,18 @@
+---
+- name: Provisioning on VMware vCloud
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    vm_count_limit:   30
+
+  roles:
+    - role: create
+      tags: create
+#    - role: update
+#      tags: update
+    - role: retrieve
+      tags: retrieve
+    - role: delete
+      tags: delete
+

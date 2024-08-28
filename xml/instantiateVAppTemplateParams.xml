@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<InstantiateVAppTemplateParams
+	xmlns="http://www.vmware.com/vcloud/v1.5"
+	name="{{ vapp_name }}"
+	deploy="true"
+	powerOn="false"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1">
+    
+    <Description>{{ vapp_description | default('UDM 5G vApp') }}</Description>
+    <InstantiationParams>
+        <NetworkConfigSection>
+            <ovf:Info>Configuration parameters for logical networks</ovf:Info>
+{% for item in vdc_networks %}
+            <NetworkConfig networkName="{{ item.vdc_network_name }}">
+                <Configuration>
+                    <ParentNetwork href="{{ api_host_vmware }}/api/network/{{ vdc_networks_vmware_ids [item.interface_index] }}" />
+                    <FenceMode>bridged</FenceMode>
+                </Configuration>
+            </NetworkConfig>
+{% endfor %}
+        </NetworkConfigSection>
+    </InstantiationParams>
+    <Source href="{{ query_specific_template_result.value }}" />
+</InstantiateVAppTemplateParams>

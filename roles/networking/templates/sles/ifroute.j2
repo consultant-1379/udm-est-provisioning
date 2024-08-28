@@ -1,0 +1,17 @@
+#### IPv4 NETWORK routes ####
+{% for item in template_routes %}
+{% if template_network_address_ipv4 == item.network %}
+{% for destination in item.routes %}
+{{ destination.dest_network}} {{ item.gateway }} {{ destination.dest_mask }} -
+{% endfor %}
+{% endif %}
+{% endfor %}
+#### IPv6 NETWORK routes ####
+{% for item in template_routes %}
+{% if template_network_address_ipv6 == item.network %}
+{% for destination in item.routes %}
+{{ destination.dest_network}} {{ item.gateway }} - -
+
+{% endfor %}
+{% endif %}
+{% endfor %}

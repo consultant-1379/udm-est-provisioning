@@ -1,0 +1,15 @@
+# - Depends on:
+#   - vm_computer_name
+--- 
+  - name: Delete Tool in Rosetta.
+    local_action:
+      module:     e3utils_rosetta_tool
+      name:       "{{ vm_computer_name }}"
+      infratype:  "{{ rosetta_infratype }}"
+      ndo:        "{{ rosetta_ndo }}"
+      team:       "{{ rosetta_team }}"
+      team_admin: "{{ rosetta_team_admin }}"
+      owner:      "{{ rosetta_owner }}"
+      state:      absent
+      additional_info: "{{ rosetta_additional_info_list }}"
+    register: rosetta_ci_deletion

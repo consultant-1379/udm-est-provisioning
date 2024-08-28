@@ -1,0 +1,20 @@
+# - Depends on:
+#   - vm_computer_name
+--- 
+
+- name: Create Tool in Rosetta.
+  local_action:
+    module:     e3utils_rosetta_tool
+    name:       "{{ vm_computer_name }}"
+    infratype:  "{{ rosetta_infratype }}"
+    ndo:        "{{ rosetta_ndo }}"
+    team:       "{{ rosetta_team }}"
+    team_admin: "{{ rosetta_team_admin }}"
+    owner:      "{{ rosetta_owner }}"
+    status:     "free"
+    state:      present
+    mode:       overwrite
+    create:     true
+    additional_info: "{{ rosetta_additional_info_list }}"
+  ignore_errors: yes
+  register: rosetta_ci_creation

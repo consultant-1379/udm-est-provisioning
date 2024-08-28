@@ -1,0 +1,62 @@
+---
+  # Task list: hydra_ipv4_free.yml
+  # - Depends on:
+  #   - hydra_tmpl_name
+  #   - api_token_hydra
+  #   - api_host_hydra
+  #   - hydra_search_template
+  #
+  # - Provides:
+  #   -true|false
+  #
+  # - Description:
+  #   Set of tasks to check if Hydra has enough free IPv4 addresses in specified network range.
+  #   It outputs error if it doesn't, thus preventing unnecessary CI instantiation.
+  #
+
+  - set_fact:
+      hydra_ipv4_free_all_nets: true
+
+  - name: Get Hydra template details from specified ID
+    uri:
+      url: "{{ api_host_hydra }}/api/{{ api_version_hydra }}/template_ci/{{ hydra_search_template.json.result[0].id }}?expand=logical_interfaces.template_ci_ip_allocation.network "
+      headers:
+        Authorization: "{{ api_token_hydra }}"
+      method: GET
+      timeout: "{{ hydra_timeout }}"
+    register: hydra_template_details
+
+  - debug:
+      var: hydra_search_template.json.result
+      verbosity: 3
+
+  - set_fact:
+      total_vm_count: "{{ vm_count }}"
+    when: not vapp_exists
+
+  - set_fact:
+      total_vm_count: "{{ vm_count - vms_total.count | int }}"
+    when: vapp_exists
+
+  - name: Check free IPv4 addresses in Hydra
+    uri:
+      url: "{{ api_host_hydra }}/api/{{ api_version_hydra }}/network/{{ item.template_ci_ip_allocation[0].network.id }}/ipv4_free?amount={{ vm_count }}"
+      headers:
+        Authorization: "{{ api_token_hydra }}"
+      method: GET
+      timeout: "{{ hydra_timeout }}"
+    with_items: "{{ hydra_template_details.json.result[0].logical_interfaces }} "
+    register: hydra_ipv4_free
+    ignore_errors: yes
+
+  - set_fact:
+      hydra_ipv4_free_all_nets: "{{ hydra_ipv4_free_all_nets and not item.failed }}"
+    with_items: "{{ hydra_ipv4_free.results }}"
+
+  - debug:
+      var: hydra_ipv4_free
+      verbosity: 3
+
+  - fail:
+      msg: "The networks linked to the template provided have not free ips to allocate the VMs"
+    when: not hydra_ipv4_free_all_nets

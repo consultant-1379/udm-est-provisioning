@@ -1,0 +1,73 @@
+---
+  # Task list: hydra_ci_delete.yml
+  # - Depends on:
+  #   - vm_name
+  #   - api_token_hydra
+  #   - api_host_hydra
+  #
+  # - Provides: none
+  #
+  # - Description:
+  #   Set of tasks necessary to delete Hydra CI entry.
+  #
+
+  - name: Find CI entry in Hydra from specified VM name
+    uri:
+      url: "{{ api_host_hydra }}/api/{{ api_version_hydra }}/ci/search"
+      headers:
+        Authorization: "{{ api_token_hydra }}"
+      body:
+        hostname: "{{ vm_name.value }}"
+      body_format: json
+      timeout: "{{ hydra_timeout }}"
+      method: POST
+    register: hydra_search_hostname
+
+  - name: Set 'Hydra CI found' flag
+    set_fact:
+      hydra_ci_found: true
+    when: (hydra_search_hostname.json.result | length > 0)
+
+  - name: Set 'Hydra CI not found' flag
+    set_fact:
+      hydra_ci_found: false
+    when: (hydra_search_hostname.json.result | length < 1)
+
+  - debug:
+      msg: "Hydra CI entry for given VM name not found, probably already deleted. Continuing..."
+    when: not hydra_ci_found
+
+  - debug:
+      var: hydra_search_hostname.json
+      verbosity: 3
+    when: hydra_ci_found
+
+  - name: Extract ID from CI entry
+    set_fact:
+      ci_entry_id: "{{ hydra_search_hostname.json.result[0].id }}"
+    when: hydra_ci_found
+
+  - debug:
+      var: ci_entry_id
+      verbosity: 3
+    when: hydra_ci_found
+
+  - name: Delete CI entry in Hydra
+    uri:
+      url: "{{ api_host_hydra }}/api/{{ api_version_hydra }}/ci/{{ ci_entry_id }}/transitions"
+      headers:
+        Authorization: "{{ api_token_hydra }}"
+      body:
+        life_cycle_status_id: 4
+      body_format: json
+      method: POST    
+      return_content: yes
+      status_code: 200
+      timeout: "{{ hydra_timeout }}"
+    register: hydra_ci_delete
+    when: hydra_ci_found
+
+  - debug:
+      var: hydra_ci_delete.json
+      verbosity: 3
+    when: hydra_ci_found

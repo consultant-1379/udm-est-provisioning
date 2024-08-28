@@ -1,0 +1,28 @@
+---
+- name: Monitor Install
+  hosts: all
+  gather_facts: yes
+  vars:
+    monitor_home: /NMT
+    monitor_version: 2.5
+  tasks:
+
+# Java
+
+    - name: Install Java
+      zypper:
+        name: java
+        state: present
+
+# Monitor Installation
+
+    - file:
+        path: "{{ monitor_home }}"
+        state: directory
+        mode: 0777
+
+    - name: Download and unarchive monitor files
+      unarchive:
+        src: https://arm.rnd.ki.sw.ericsson.se/artifactory/proj-jcat-release-local/com/ericsson/univ/test/monitor/{{ monitor_version }}/monitor-{{ monitor_version }}.tar.gz
+        dest: "{{ monitor_home }}"
+        remote_src: yes

@@ -1,0 +1,25 @@
+---
+
+jira_id:    "< JIRA ID >"
+signum:     "< signum >"
+
+# local dir to save HTTP actions
+tmp_dir: "/home/{{ signum }}/tmp_xml"
+
+# Hydra template to create CI entry
+hydra_tmpl_name: "udm5gEST_udm_vdc_438"
+#hydra_tmpl_name: "udm5gEST_udm_vdc_468"
+
+# vApp Settings.
+vapp_tmpl_name: "vm_small"
+vapp_name: "{{ signum }}_devenv_{{ jira_id }}"
+vapp_description: "UDM-5G shared vApp {{ signum }}"
+vm_count: 1
+
+# VM configurations details
+os_profile: "ubuntu"
+
+# Rosetta CMDB additional details:
+vm_owner:        "< signum of the owner of the VM >"
+vm_infratype:   "5g_dev_vm_small"
+vm_revision:    "V3"

@@ -1,0 +1,6 @@
+---
+os_profile: {{ template_os_profile }}
+vm_networks:
+{% for item in template_ip_addresses %}
+  - { ip_address_v4: {{ item.ip_address }}/{{ item.ip_cidr }} }
+{% endfor %}

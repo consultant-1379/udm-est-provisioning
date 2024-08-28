@@ -1,0 +1,39 @@
+---
+  # Task list: pxe_check_delete.yml
+  # - Depends on:
+  #   - vm_mac_address
+  #   - api_host_pxe
+  #
+  # - Provides: none
+  #
+  # - Description:
+  #   Set of tasks to check and delete DHCP entry on PXE server
+  #   based on provided (VM) MAC address.
+  #
+
+  - name: Check for existing PXE config for given MAC
+    uri:
+      url: "{{ api_host_pxe }}:8000/mac/{{ vm_mac_address.value }}"
+      method: GET
+      return_content: yes
+      status_code: 200,404
+    register: pxe_check
+
+  - debug:
+      var: pxe_check.content
+      verbosity: 3
+
+  - name: Delete any existing PXE config for given MAC
+    uri:
+      url: "{{ api_host_pxe }}:8000/mac/{{ vm_mac_address.value }}"
+      method: DELETE
+      return_content: yes
+      status_code: 200
+    register: pxe_delete
+    when: pxe_check.status == 200
+
+  - debug:
+      var: pxe_delete.content
+      verbosity: 3
+    when: pxe_delete.content is defined
+

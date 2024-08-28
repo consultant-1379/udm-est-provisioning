@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GuestCustomizationSection
+   xmlns="http://www.vmware.com/vcloud/v1.5"
+   xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1"
+   ovf:required="false">
+   <ovf:Info>Specifies Guest OS Customization Settings</ovf:Info>
+   <Enabled>true</Enabled>
+   <ChangeSid>false</ChangeSid>
+   <ComputerName>{{ vm_computer_name }}</ComputerName>
+</GuestCustomizationSection>

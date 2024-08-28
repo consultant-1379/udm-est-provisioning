@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<NetworkConnectionSection 
+   type="application/vnd.vmware.vcloud.networkConnectionSection+xml"
+   xmlns="http://www.vmware.com/vcloud/v1.5"
+   xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1">
+   <ovf:Info>Firewall allows access to this address.</ovf:Info>
+   <PrimaryNetworkConnectionIndex>{% for item in vm_ip_address_all_networks if item.is_primary%}{{ item.interface_index }}{% endfor %}</PrimaryNetworkConnectionIndex>
+{% for item in vm_ip_address_all_networks %}
+   <NetworkConnection
+      network="{{ item.vdc_network_name }}">
+      <NetworkConnectionIndex>{{ item.interface_index }}</NetworkConnectionIndex>
+      <IpAddress>{{ item.ip_address }}</IpAddress>
+      <IsConnected>true</IsConnected>
+      <IpAddressAllocationMode>MANUAL</IpAddressAllocationMode>
+   </NetworkConnection>
+{% endfor %}
+</NetworkConnectionSection>

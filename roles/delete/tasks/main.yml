@@ -1,0 +1,87 @@
+---
+  - set_fact:
+      vm_list: []
+    when: vm_list is not defined
+
+  # Perform sanity checks (check if there is a working set to
+  # perform the rest of operations with)
+  - include_role:
+      name: generic
+      tasks_from: checks
+    when: checks_passed is not defined
+  - set_fact:
+      checks_passed: true
+
+  # Create vCloud API session and get token cookie
+  - include_role:
+      name: vmware
+      tasks_from: vmware_login
+    when: vmware_login is not defined
+  - assert:
+      that:
+        - vmware_login.x_vcloud_authorization != ""
+      msg: "Could not create session towards VMware vCloud API!"
+
+  # Query if specified vApp exists
+  - include_role:
+      name: vmware
+      tasks_from: query_specific_vapp
+    when: query_specific_vapp_result is not defined
+  - assert:
+      that:
+        - query_specific_vapp_result.value != ""
+      msg: "Specified vApp does not exist!"
+
+  # Get vApp details
+  - include_role:
+      name: vmware
+      tasks_from: get_vapp_details
+
+  # Get number of VMs deployed in vApp
+  - name: Count all VMs inside vApp
+    xml:
+      path: "{{ tmp_dir }}/vapp_details.xml"
+      xpath: /n:VApp/n:Children/n:Vm
+      namespaces:
+        n: http://www.vmware.com/vcloud/v1.5
+      count: yes
+    register: vms_total
+
+  - debug:
+      var: vms_total.count
+      verbosity: 3
+
+  # Clean VM entries in Hydra and PXE server
+  - include_role:
+      name: vmware
+      tasks_from: delete_vm_entries
+    vars:
+      obtained_vapp_details: true
+    with_sequence: start=1 end={{ vms_total.count | int }} stride=1
+
+  # Query if specified vApp is in correct state before undeploy
+  - include_role:
+      name: vmware
+      tasks_from: query_specific_vapp
+    vars:
+      extra_filter_parameters: ";isBusy==false;isDeployed==true;isEnabled==true;isInMaintenanceMode==false"
+  - assert:
+      that:
+        - query_specific_vapp_result.value != ""
+      msg: "Specified vApp exists but is not in correct state!"
+
+  # Undeploy vApp (basically, power Off)
+  - include_role:
+      name: vmware
+      tasks_from: undeploy_vapp
+
+  # Delete vApp
+  - include_role:
+      name: vmware
+      tasks_from: delete_vapp
+
+  # vCloud API session logout
+  - include_role:
+      name: vmware
+      tasks_from: vmware_logout
+    when: logout_when_finished

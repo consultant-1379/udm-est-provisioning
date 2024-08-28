@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RecomposeVAppParams
+xmlns="http://www.vmware.com/vcloud/v1.5"
+xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1"
+xmlns:environment_1="http://schemas.dmtf.org/ovf/environment/1">
+<SourcedItem sourceDelete="false">
+<Source href="{{ template_vm_href.value }}" name="{{ vm_computer_name }}"/>
+</SourcedItem>
+</RecomposeVAppParams>

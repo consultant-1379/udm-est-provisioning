@@ -1,0 +1,41 @@
+---
+  # Task list: query_specific_orgnetwork.yml
+  # - Depends on:
+  #   - org_network_name
+  #
+  # - Provides:
+  #   - query_specific_orgnetwork_result
+  #
+  # - Description:
+  #   Set of tasks to query VMware API for specific Org network (basically, where to connect VM to).
+  #   Customizable filter options, can be tailored for specific use.
+  #
+
+  - name: VMware vCloud API query - Org network
+    uri:
+      url: "{{ api_host_vmware }}/api/query?type=orgNetwork&filter=(name=={{ org_network_name | urlencode }}{{ extra_filter_parameters | default('')  }})"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+      method: GET
+      return_content: yes
+      dest: "{{ tmp_dir }}/query_specific_orgnetwork.xml"
+      status_code: 200
+    register: query_specific_orgnetwork
+
+  - debug:
+      var: query_specific_orgnetwork.content
+      verbosity: 3
+
+  - name: Extract vApp network href
+    xml_read:
+      xmlfile: "{{ tmp_dir }}/query_specific_orgnetwork.xml"
+      xpath: "/n:QueryResultRecords/n:OrgNetworkRecord/@href"
+      namespaces: "n=http://www.vmware.com/vcloud/v1.5"
+    register: query_specific_orgnetwork_result
+
+  - debug:
+      var: query_specific_orgnetwork_result.value
+      verbosity: 3
+

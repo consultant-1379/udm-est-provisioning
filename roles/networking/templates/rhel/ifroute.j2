@@ -1,0 +1,9 @@
+{% for item in template_routes %}
+{% if template_network_address_ipv4 == item.network %}
+{% for destination in item.routes %}
+ADDRESS{{ loop.index0 }}={{ destination.dest_network }}
+NETMASK{{ loop.index0 }}={{ destination.dest_mask }}
+GATEWAY{{ loop.index0 }}={{ item.gateway }}
+{% endfor %}
+{% endif %}
+{% endfor %}

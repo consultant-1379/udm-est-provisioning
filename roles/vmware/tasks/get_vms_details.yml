@@ -1,0 +1,85 @@
+---
+
+  # Task list: get_vms_details.yml
+  # - Depends on:
+  #   - query_specific_vapp_result
+  #
+  # - Provides:
+  #   - vm_href
+  #   - vm_name
+  #   - vm_mac_address
+  #   - vm_ip_address
+  #
+  # - Description:
+  #   Set of tasks useful to get vApp VMs details.
+  #
+
+  # Extract  VM name
+  - name: Extract VM name
+    xml_read:
+      xmlfile: "{{ tmp_dir }}/vapp_details.xml"
+      xpath: "/n:VApp/n:Children/n:Vm[{{ item }}]/@name"
+      namespaces: "n=http://www.vmware.com/vcloud/v1.5"
+    register: vm_name
+    failed_when: vm_name.value == ""
+
+  - debug:
+      var: vm_name.value
+      verbosity: 3
+
+  # Extract VM href
+  - name: Extract VM href
+    xml_read:
+      xmlfile: "{{ tmp_dir }}/vapp_details.xml"
+      xpath: "/n:VApp/n:Children/n:Vm[{{ item }}]/@href"
+      namespaces: "n=http://www.vmware.com/vcloud/v1.5"
+    register: vm_href
+    failed_when: vm_href.value == ""
+
+  - debug:
+      var: vm_href.value
+      verbosity: 3
+
+  # Extract VM MAC address
+  - name: Extract VM MAC address
+    xml_read:
+      xmlfile: "{{ tmp_dir }}/vapp_details.xml"
+      xpath: "/n:VApp/n:Children/n:Vm[{{ item }}]/n:NetworkConnectionSection/n:NetworkConnection/n:MACAddress/text()"
+      namespaces: "n=http://www.vmware.com/vcloud/v1.5"
+    register: vm_mac_address
+    failed_when: vm_mac_address.value == ""
+
+  - debug:
+      var: vm_mac_address.value
+      verbosity: 3
+
+  # Extract VM IP address
+  - name: Extract VM IP address
+    xml_read:
+      xmlfile: "{{ tmp_dir }}/vapp_details.xml"
+      xpath: "/n:VApp/n:Children/n:Vm[{{ item }}]/n:NetworkConnectionSection/n:NetworkConnection/n:IpAddress/text()"
+      namespaces: "n=http://www.vmware.com/vcloud/v1.5"
+    register: vm_ip_address
+    failed_when: vm_ip_address.value == ""
+
+  - debug:
+      var: vm_ip_address.value
+      verbosity: 3
+
+  # Write VM details to file
+  - name: Create backup inventory file
+    file:
+      path: "{{ tmp_dir }}/{{ vapp_name }}_inventory_file"
+      mode: 0664
+      state: touch
+
+  - name: Add title bar to backup inventory file
+    lineinfile:
+        path: "{{ tmp_dir }}/{{ vapp_name }}_inventory_file"
+        line: "VM\t\tHREF\t\t\t\t\t\t\t\t\t\t\tIP\t\t\tMAC"
+
+  - name: Insert VM details into backup inventory file
+    lineinfile:
+        path: "{{ tmp_dir }}/{{ vapp_name }}_inventory_file"
+        line: "{{ vm_name.value }}\t{{ vm_href.value }}\t{{ vm_ip_address.value }}\t\t{{ vm_mac_address.value }}"
+

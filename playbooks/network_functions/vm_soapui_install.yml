@@ -1,0 +1,44 @@
+---
+- name: SOAPUI Install
+  hosts: all
+  gather_facts: yes
+  vars:
+    soapui_home: /SOAPUI
+    soapui_version: 5.5.0
+    diameter_tools_version: 1.0.8
+  tasks:
+
+
+# Java
+
+    - name: Install Java
+      zypper:
+        name: java
+        state: present
+
+# lksctp-tools
+
+    - name: "Install lksctp-tools"
+      zypper:
+        name: lksctp-tools
+        state: present
+
+# SoapUI Installation
+
+    - file:
+        path: "{{ soapui_home }}"
+        state: directory
+        mode: 0777
+
+    - name: Download and unarchive SoapUI files
+      unarchive:
+        src: "https://s3.amazonaws.com/downloads.eviware/soapuios/{{ soapui_version }}/SoapUI-{{ soapui_version }}-linux-bin.tar.gz"
+        dest: "{{ soapui_home }}"
+        extra_opts: [--strip-components=1]
+        remote_src: yes
+
+    - name: Download DiameterTools Plugin to SoapUI Installation
+      get_url:
+        url: "https://arm.rnd.ki.sw.ericsson.se/artifactory/proj-jcat-release-local/com/ericsson/test/diameter-plugin-soapui/{{ diameter_tools_version }}/diameter-plugin-soapui-{{ diameter_tools_version }}.jar"
+        dest: "{{ soapui_home }}/lib/DiameterTools.jar"
+        remote_src: yes

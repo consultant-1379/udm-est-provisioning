@@ -1,0 +1,170 @@
+---
+- name: SLAMD Install
+  hosts: all
+  gather_facts: yes
+  vars:
+    slamd_home:     /slamd
+    slamd_version:  2.0.1-2016
+    vnc_password:   password
+    slamd_master:   SLAMD_IP_ADDRESS
+
+  tasks:
+
+# OS Settings
+
+    - name: Set up OS file limits
+      pam_limits:
+        domain:     "{{ item.domain }}"
+        limit_type: "{{ item.limit_type }}"
+        limit_item: "{{ item.limit_item }}"
+        value:      "{{ item.value | int }}"
+      with_items:
+        - { domain: "*", limit_type: soft, limit_item: nofile, value: 10000 }
+        - { domain: "*", limit_type: hard, limit_item: nofile, value: 12000 }
+
+    - name: Create symbolic link to /proj/cudb_tools/STAF
+      file:
+        src:    "/proj/cudb_tools/STAF"
+        dest:   "/staf"
+        state:  link
+        force:  yes
+
+    - name: generate /etc/bash.bashrc.local file
+      copy:
+        content: |-
+          # This file is being maintained by Ansible.
+          # DO NOT EDIT
+          #        
+          export SITE="seli"
+          if [[ $(id -u) != 0 ]]; then
+            source /etc/home/bashrc
+          fi
+        dest: /etc/bash.bashrc.local
+        owner:  'root'
+        group:  'root'
+        mode:   '0644'
+
+    - name: generate /etc/csh.cshrc.local file
+      copy:
+        content: |-
+          # This file is being maintained by Ansible.
+          # DO NOT EDIT
+          #        
+          source /etc/profile.d/modules.csh
+        dest: /etc/csh.cshrc.local
+        owner:  'root'
+        group:  'root'
+        mode:   '0644'
+
+# Install Generic Packages
+
+    - name: Install Generic Packages
+      zypper:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - netcat-openbsd
+        - expect
+        - telnet
+        - dialog
+        - bc
+        - rsync
+        - iptables
+        - tcpdump
+        - kernel-devel
+        - Modules
+
+# Install modulues
+
+    - name: Update modulepath
+      lineinfile:
+        path:   "/usr/share/Modules/3.2.10/init/.modulespath"
+        state:  present
+        line:   "/env/common/modules        #Modules on AFS"
+
+# Install Specialiced packages.
+
+    - name: Install Specific Packages
+      zypper:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - "http://eisinstall.rnd.ericsson.se/gssprofiles/suse/EIS-SLES12-SP2/updates/production/latest/eis-sles12-sp2-sdk-updates/rpm/java-1_7_1-ibm-devel-1.7.1_sr4.1-34.1.x86_64.rpm"
+        - "java-1_7_1-ibm-devel=1.7.1_sr4.5-37.1"
+
+# SLAMD Installation
+
+    - name: Delete slamds home directory
+      file:
+        path: "/slamd"
+        state: absent
+
+    - name: Create slamds home directory
+      file:
+        path: "/slamd"
+        state: directory
+        mode:  g+w
+        group: 60000
+
+
+    - name: Download and unarchive SLAMD files
+      unarchive:
+        src:  "https://arm.rnd.ki.sw.ericsson.se/artifactory/proj-e3tools-external-local/4g/binaries/slamd/slamd-{{ slamd_version }}.zip"
+        dest: "/"
+        remote_src: yes
+
+    - name: generate slamd service script
+      copy:
+        content: |-
+          # This file is being maintained by Ansible.
+          # DO NOT EDIT
+          #        
+          [Unit]
+          Description=Slamd service
+
+          [Service]
+          Type=oneshot
+          ExecStart=/{{ slamd_home }}/bin/startup.sh
+          ExecStop=/{{ slamd_home }}/bin/shutdown.sh
+          ExecRestart=/{{ slamd_home }}/bin/shutdown.sh && /{{ slamd_home }}/bin/startup.sh
+          RemainAfterExit=yes
+
+          [Install]
+          WantedBy=multi-user.target
+        dest:   /usr/lib/systemd/system/slamd.service
+        owner:   'root'
+        group:   'root'
+        mode:    '0644'
+
+# SLAMD Set Up
+
+    - name: Set up SLAMD Master IP in the slamd_client.conf file.
+      lineinfile:
+        path: "/slamd/slamd_client/slamd_client.conf"
+        state: present
+        create: yes
+        regexp: '^%SLAMD_ADDRESS='
+        line: "SLAMD_ADDRESS={{ slamd_master }}"
+
+    - name: Generate SLAMD sudoers file.
+      copy:
+        content: |-
+          # This file is being maintained by Ansible.
+          # DO NOT EDIT
+          #
+          Cmnd_Alias FORTESTS = /usr/sbin/iptables, /sbin/route, /usr/sbin/tcpdump, /usr/bin/netcat, /sbin/ip route
+          Cmnd_Alias SLAMDCOMMANDS = /usr/bin/systemctl status slamd, /usr/bin/systemctl start slamd, /usr/bin/systemctl stop slamd, /usr/bin/systemctl restart slamd, /sbin/reboot
+          ALL ALL = NOPASSWD: FORTESTS
+          ALL ALL = NOPASSWD: SLAMDCOMMANDS
+        dest:   /etc/sudoers.d/50_slamd
+        owner:  'root'
+        group:  'root'
+        mode:   '0644'
+        validate: "visudo -cf %s"
+
+# Starup SLAMD and Network Services
+
+    - name: Restart SLAMD service
+      service:
+        name: slamd
+        state: restarted

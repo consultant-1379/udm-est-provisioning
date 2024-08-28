@@ -1,0 +1,35 @@
+---
+
+  # Task list: get_vapp_details.yml
+  # - Depends on:
+  #   - query_specific_vapp_result
+  #
+  # - Provides:
+  #   - vapp_details.xml
+  #
+  # - Description:
+  #   Set of tasks to get vApp details.
+  #
+
+  - include_tasks: query_specific_vapp.yml
+    when: query_specific_vapp_result is not defined
+
+  - assert:
+      that:
+        - query_specific_vapp_result != ""
+      msg: "Specified vApp does not exist!"
+
+  # Get vApp details
+  - name: Get vApp details
+    uri:
+      url: "{{ query_specific_vapp_result.value }}"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+        Content-type: "application/vnd.vmware.vcloud.vApp+xml"
+      method: GET
+      status_code: 200
+      dest: "{{ tmp_dir }}/vapp_details.xml"
+    register: get_vapp_details
+

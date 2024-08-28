@@ -1,0 +1,42 @@
+---
+  # Task list: query_specific_vm.yml
+  # - Depends on:
+  #   - vm_computer_name
+  #   - extra_filter_parameters
+  #
+  # - Provides:
+  #   - query_specific_vm_result
+  #
+  # - Description:
+  #   Set of tasks to query VMware API for specific VM.
+  #   Customizable filter options, can be tailored for specific use.
+  #
+
+  - name: VMware vCloud API query - check for specific VM
+    uri:
+      url: "{{ api_host_vmware }}/api/query?type=vm&filter=(name=={{ vm_computer_name | urlencode }}{{ extra_filter_parameters | default('') }})"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+      method: GET
+      return_content: yes
+      dest: "{{ tmp_dir }}/query_specific_vm.xml"
+      status_code: 200
+    register: query_specific_vm
+
+  - debug:
+      var: query_specific_vm.content
+      verbosity: 3
+
+  - name: Extract VM record href
+    xml_read:
+      xmlfile: "{{ tmp_dir }}/query_specific_vm.xml"
+      xpath: "/n:QueryResultRecords/n:VMRecord/@href"
+      namespaces: "n=http://www.vmware.com/vcloud/v1.5"
+    register: vm_href
+
+  - debug:
+      var: vm_href.value
+      verbosity: 3
+

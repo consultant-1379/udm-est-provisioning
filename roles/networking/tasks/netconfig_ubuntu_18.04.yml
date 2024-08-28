@@ -1,0 +1,60 @@
+# - Depends on:
+#   - Valid inventory
+#   - vm_networks var related to each host in the inventory:
+#
+# vm_networks:
+#   - { ip_address_v4: 10.210.183.15/25 }
+#   - { ip_address_v4: 10.139.16.146/25,    ip_address_v6: "2001:1b74:8b:8840::6/64"}
+#   - { ip_address_v4: 10.139.17.146/25,    ip_address_v6: "2001:1b74:8b:88c0::6/64" }
+#   - { ip_address_v4: 10.139.16.8/25/25,   ip_address_v6: "2001:1b74:8b:8800::6/64" }
+#   - { ip_address_v4: 10.139.17.18/25,     ip_address_v6: "2001:1b74:8b:8880::6/64" }
+#   - { ip_address_v4: 10.139.15.146/25,    ip_address_v6: "2001:1b74:8b:87c0::6/64"}
+--- 
+- name: Debug host IP addresses
+  debug:
+    var: item
+  with_items: "{{ vm_networks }}"
+
+- name: Debug host NIC interfaces
+  debug: 
+    var: item
+  with_items: "{{ ansible_interfaces | difference(['lo','docker0']) | sort }}"
+
+# The number of networks provided in the Ansible inventory and the numer of interfaces in the VM nust match.
+
+- name: Verify that the number of IP addresses and NIC interfaces match
+  assert:
+    that: "{{ vm_networks | length }} == {{ ansible_interfaces | difference(['lo','docker0']) | length }}"
+
+# Make a backup of /etc/network/interfaces
+
+- name: Backup /etc/network/interfaces
+  shell: cp /etc/network/interfaces /etc/network/interfaces.bkp
+
+# Configure NIC with the IPs provided and routes for that network
+
+- name: Generate configuration file for all interfaces and routes
+  template:
+    src: ../templates/ubuntu/interfaces.j2
+    dest: "/etc/network/interfaces"
+    owner: root
+    group: root
+    mode: 0644
+  vars: 
+    template_routes: "{{ all_routes }}"
+    template_item: "{{ vm_networks | zip (ansible_interfaces | difference(['lo','docker0']) | sort) | list }}"
+
+- name: Update repositories cache and install "ifupdown" package
+  apt:
+    name: ifupdown
+    update_cache: yes
+
+- name: Force MGMT interface reload
+  shell: "ifdown --force ens32 lo && ifup -a"
+
+- name: Enable, unmask and restart Network service
+  systemd:
+    name: networking
+    enabled: yes
+    masked: no
+    state: restarted

@@ -1,0 +1,14 @@
+DEVICE={{ network_device }}
+BOOTPROTO=static
+STARTMODE=onboot
+USERCONTROL=no
+MTU={{ mtu | default ('1500')}}
+{% if template_ip_address_ipv4 != "null" %}
+IPADDR={{ template_ip_address_ipv4 }}
+NETMASK={{ template_network_mask_ipv4 }}
+{% endif %}
+{%- if template_ip_address_ipv6 != "null" -%}
+IPADDR_0={{ template_ip_address_ipv6 }}/{{ template_network_prefix_ipv6 }}
+IPV6INIT=yes
+
+{%- endif -%}

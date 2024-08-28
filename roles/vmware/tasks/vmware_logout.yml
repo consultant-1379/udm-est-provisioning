@@ -1,0 +1,22 @@
+---
+  # Task list: vmware_logout.yml
+  # - Depends on:
+  #   - api_host_vmware
+  #   - vmware_login.x_vcloud_authorization
+  #
+  # - Provides: none
+  #
+  # - Description:
+  #   Provides logout functionality from active session towards VMware API.
+  #
+
+  - name: VMware vCloud API session logout
+    uri:
+      url: "{{ api_host_vmware }}/api/session"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+      method: DELETE
+      status_code: 204
+

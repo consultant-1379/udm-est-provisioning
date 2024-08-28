@@ -1,0 +1,14 @@
+NAME="{{ template_interface }}"
+DEVICE="{{ template_interface }}"
+ONBOOT="yes"
+BOOTPROTO="none"
+TYPE="Ethernet"
+MTU={{ mtu | default ('1500')}}
+{% if template_ip_address_ipv4 != "null" %}
+IPADDR={{ template_ip_address_ipv4 }}
+NETMASK={{ template_network_mask_ipv4 }}
+{% endif %}
+{%- if template_ip_address_ipv6 != "null" -%}
+IPV6INIT=yes
+IPV6ADDR={{ template_ip_address_ipv6 }}/{{ template_network_prefix_ipv6 }}
+{%- endif -%}

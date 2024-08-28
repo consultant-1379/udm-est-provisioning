@@ -1,0 +1,24 @@
+---
+# vCloud connection data for Shared VDC
+org_name: "estudm"
+vdc_name: "UDM 5G SEROPOD3-vdc"
+vdc_retries: 30
+vdc_delay: 60
+vdc_site: "SERO"
+
+#catalog_name: "udmvm_template"
+
+api_host_pxe:    "http://api.lxgen.sero.gic.ericsson.se"
+api_host_vmware: "https://vcloud.sero.gic.ericsson.se"
+api_host_hydra:  "https://hydra.gic.ericsson.se"
+
+# Correspondence between Hydra Networks and ESTUDM VDC Networks
+
+hydra_to_vdc:
+    "UDM SEROPOD3 mgmt":                "450-UDM  SEROPOD3 mgmt"
+    "UDM SEROPOD3 OAM":                 "447-UDM SEROPOD3 OAM"
+    "UDM SEROPOD3 sig":                 "448-UDM SEROPOD3 sig"
+    "UDM SEROPOD3 provisioning":        "446-UDM SEROPOD3 provisioning"
+    "UDM SEROPOD3 ldap":                "449-UDM SEROPOD3 ldap"
+    "UDM SEROPOD3 raddia":              "445-UDM SEROPOD3 raddia"
+    "UDM SEROPOD3 mgmt 2nd":            "1065-UDM SEROPOD3 mgmt 2nd"

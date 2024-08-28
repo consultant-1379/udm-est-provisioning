@@ -1,0 +1,108 @@
+---
+
+  - set_fact:
+      vm_list: []
+    when: vm_list is not defined
+
+  # Perform sanity checks (check if there is a working set to
+  # perform the rest of operations with)
+  - include_role:
+      name: generic
+      tasks_from: checks
+    when: checks_passed is not defined
+  - set_fact:
+      checks_passed: true
+
+  # Create vCloud API session and get token cookie
+  - include_role:
+      name: vmware
+      tasks_from: vmware_login
+    when: vmware_login is not defined
+  - assert:
+      that:
+        - vmware_login.x_vcloud_authorization != ""
+      msg: "Could not create session towards VMware vCloud API!"
+
+  # Query if specified vApp already exists
+  - include_role:
+      name: vmware
+      tasks_from: query_specific_vapp
+  - assert:
+      that:
+        - query_specific_vapp_result.value != ""
+      msg: "Specified vApp does not exist!"
+
+  # Query for vApp template
+  - include_role:
+      name: vmware
+      tasks_from: query_specific_template
+    vars:
+      extra_filter_parameters: ";isBusy==false;status==RESOLVED;vdcName=={{ vdc_name | urlencode }}"
+  - assert:
+      that:
+        - query_specific_template_result.value != ""
+      msg: "Could not find specified vApp template! Check your inputa data..."
+
+  # Get vApp template VM details
+  - include_role:
+      name: vmware
+      tasks_from: get_template_vm_details
+
+  # Hydra create additional CI
+  - include_role:
+      name: hydra
+      tasks_from: hydra_ci_create
+
+  # Recompose vApp
+  - include_role:
+      name: vmware
+      tasks_from: recompose_vapp
+
+  # Get new VM href
+  - include_role:
+      name: vmware
+      tasks_from: query_specific_vm
+
+  # Update new VM computer name
+  - include_role:
+      name: vmware
+      tasks_from: update_vm_computer_name
+
+  # Update new VM IP address
+  - include_role:
+      name: vmware
+      tasks_from: update_vm_ip_address
+
+  # Update new CI MAC address
+  - include_role:
+      name: hydra
+      tasks_from: hydra_mac_update
+
+  # VM deployed and fully configured, prep for OS installation
+  - include_role:
+      name: pxe
+      tasks_from: pxe_check_delete
+
+  # Execute PXE configuration
+  - include_role:
+      name: pxe
+      tasks_from: pxe_config
+
+  # Power ON VM
+  - include_role:
+      name: vmware
+      tasks_from: powerOn_vm
+
+  # vCloud API session logout
+  - include_role:
+      name: vmware
+      tasks_from: vmware_logout
+    when: logout_when_finished
+
+  # Create Rosetta CI
+  - include_role:
+      name: rosetta
+      tasks_from: rosetta_ci_create
+
+  - set_fact:
+      vm_list:  "{{ vm_list + [ vm_computer_name ] }}"

@@ -1,0 +1,6 @@
+---
+- name: Set up Additional Network Interfaces and Routing tables
+  hosts: all
+  gather_facts: yes
+  roles:
+    - role: networking

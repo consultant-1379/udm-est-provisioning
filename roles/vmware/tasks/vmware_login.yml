@@ -1,0 +1,32 @@
+---
+  # Task list: vmware_login.yml
+  # - Depends on:
+  #   - api_host_vmware
+  #   - api_user
+  #   - org_name
+  #   - api_password
+  #
+  # - Provides: vmware_login.x_vcloud_authorization
+  #
+  # - Description:
+  #   Provides authentication functionality towards VMware API.
+  #   Returns session cookie/token to auth the rest of
+  #   actions towards API, until logout.
+  #
+
+  - name: VMware vCloud API authentication
+    uri:
+      url: "{{ api_host_vmware }}/api/sessions"
+      user: "{{ api_user }}@{{ org_name }}"
+      password: "{{ api_password }}"
+      force_basic_auth: yes
+      headers:
+        Accept: "application/*+xml;version=30.0"
+      method: POST
+      dest: "{{ tmp_dir }}/vmware_login.xml"
+    register: vmware_login
+
+  - debug:
+      var: vmware_login.x_vcloud_authorization
+      verbosity: 3
+

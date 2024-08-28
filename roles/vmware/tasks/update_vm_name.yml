@@ -1,0 +1,62 @@
+---
+  # Task list: update_vm_name.yml
+  # - Depends on:
+  #   - vm_href
+  #   - vm_computer_name
+  #
+  # - Provides: none
+  #
+  # - Description:
+  #   Set of tasks to update VM name and track progress.
+  #
+
+  - name: Ready template
+    template:
+      src: "{{ playbook_dir }}/xml/vCloudName.xml"
+      dest: "{{ tmp_dir }}/vCloudName.xml"
+
+  - name: Update VM name
+    uri:
+      url: "{{ vm_href.value }}"
+      body: "{{ lookup('template', tmp_dir + '/vCloudName.xml') }}"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+        Content-Type: "application/vnd.vmware.vcloud.vm+xml"
+      method: PUT
+      return_content: yes
+      status_code: 202
+      dest: "{{ tmp_dir }}/update_vm_name.xml"
+    register: update_vm_name
+
+  - debug:
+      var: update_vm_name.content
+      verbosity: 3
+
+  - name: Extract VM name update task
+    xml_read:
+      xmlfile: "{{ tmp_dir }}/update_vm_name.xml"
+      xpath: "/n:Task/@href"
+      namespaces: "n=http://www.vmware.com/vcloud/v1.5"
+    register: update_vm_name_task
+    failed_when: update_vm_name_task.value == ""
+
+  - debug:
+      var: update_vm_name_task.value
+      verbosity: 3
+
+  - name: Wait until VM name update task is complete
+    uri:
+      url: "{{ update_vm_name_task.value }}"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+      method: GET
+      return_content: yes
+    register: update_vm_name_task_result
+    until: update_vm_name_task_result.content.find("status=\"success\"") != -1
+    retries: "{{ vdc_retries }}"
+    delay: "{{ vdc_delay }}"
+

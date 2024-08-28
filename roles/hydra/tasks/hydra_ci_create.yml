@@ -1,0 +1,112 @@
+---
+  # Task list: hydra_ci_create.yml
+  # - Depends on:
+  #   - hydra_tmpl_name
+  #   - api_token_hydra
+  #   - api_host_hydra
+  #
+  # - Provides:
+  #   - vm_computer_name
+  #   - vm_ip_address
+  #   - vm_interface_id_hydra
+  #
+  # - Description:
+  #   Set of tasks necessary to instantiate Hydra CI template.
+  #   Outputs VM hostname, IP address and logical interface ID (needed to update VM in vCloud and
+  #   configure for PXE installation later on)
+  #
+
+  - name: Find Hydra template ID from specified name
+    uri:
+      url: "{{ api_host_hydra }}/api/{{ api_version_hydra }}/template_ci/search"
+      headers:
+        Authorization: "{{ api_token_hydra }}"
+      body:
+        template_name: "{{ hydra_tmpl_name }}"
+      body_format: json
+      timeout: "{{ hydra_timeout }}"
+      method: POST
+    register: hydra_search_template
+    failed_when: (hydra_search_template.json.result | length < 1)
+
+  - debug:
+      var: hydra_search_template.json
+      verbosity: 3
+
+  - name: Extract Hydra template ID
+    set_fact:
+      ci_template_id: "{{ hydra_search_template.json.result[0].id }}"
+
+  - debug:
+      var: ci_template_id
+      verbosity: 3
+
+  - include_tasks: hydra_ipv4_free.yml
+
+  - name: Instantiate Hydra template (creates CI entry)
+    uri:
+      url: "{{ api_host_hydra }}/api/{{ api_version_hydra }}/template_ci/{{ ci_template_id }}/instantiate"
+      headers:
+        Authorization: "{{ api_token_hydra }}"
+      method: POST
+      timeout: "{{ hydra_timeout }}"
+    register: hydra_ci_instantiate
+
+  - debug:
+       var: hydra_ci_instantiate.json
+       verbosity: 3
+
+  - assert:
+      that: (hydra_ci_instantiate.json.result | length > 0)
+      msg: "NOK - got no valid response from Hydra upon instantiation!"
+
+  - name: Extract hostname from CI
+    set_fact:
+      vm_computer_name: "{{ hydra_ci_instantiate.json.result[0].hostname }}"
+
+  - debug:
+      var: vm_computer_name
+      verbosity: 3
+
+  - name: Extract IP address from CI
+    set_fact:
+      vm_ip_address: "{{ hydra_ci_instantiate.json.result[0].logical_interfaces[0].ips[0].ip_addr }}"
+
+  - set_fact:
+      vm_ip_address_all_networks: [] 
+      interface_count: 0
+
+  - name: Extract IP address from additional networks in the CI 
+    set_fact:
+      interface_count: "{{ interface_count | int + 1 | int }}"
+      vm_ip_address_all_networks: "{{ vm_ip_address_all_networks + [{ 'interface_index': interface_count, 'vdc_network_name': hydra_to_vdc [item.ips[0].network.name], 'ip_address': item.ips[0].ip_addr, 'ip_cidr': item.ips[0].network.ipv4_cidr, 'is_primary': item.ips[0].is_primary}] }}"
+    with_items: "{{ hydra_ci_instantiate.json.result[0].logical_interfaces }}"
+
+  - debug:
+      var: vm_ip_address
+      verbosity: 3
+
+  - name: Extract network interface ID from CI
+    set_fact:
+      vm_interface_id_hydra: "{{ hydra_ci_instantiate.json.result[0].logical_interfaces[0].id }}"
+
+  - debug:
+      var: vm_interface_id_hydra
+      verbosity: 3
+
+# Generate host inventory when additional networks have been deployed.
+
+  - name: Include host name in temporary inventory file
+    lineinfile:
+      path: "{{ tmp_dir }}/inventory"
+      line: "{{ vm_computer_name }}.{{ vdc_site | lower }}.gic.ericsson.se"
+      insertafter: EOF
+      create: yes
+
+  - name: Generate host var files
+    template:
+      src: ../templates/host_vars.j2
+      dest: "{{ tmp_dir }}/host_vars/{{ vm_computer_name }}.{{ vdc_site | lower }}.gic.ericsson.se.yml"
+    vars: 
+      template_ip_addresses: "{{ vm_ip_address_all_networks }}"
+      template_os_profile: "{{ os_profile }}"

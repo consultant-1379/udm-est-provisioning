@@ -1,0 +1,66 @@
+# Hydra template checks tasks.
+---
+
+  - set_fact:
+      hydra_ipv4_free_all_nets: true
+    no_log: "{{ debug }}"
+
+  - set_fact:
+      hydra_ipv4_exhausted_template_networks: []
+    no_log: "{{ debug }}"
+
+  - include_role:
+      name: hydra
+      tasks_from: hydra_ci_template_query
+    no_log: "{{ debug }}"
+
+  - name: Get Hydra template details from specified ID
+    uri:
+      url: "{{ api_host_hydra }}/api/{{ api_version_hydra }}/template_ci/{{ hydra_search_template.json.result[0].id }}?expand=logical_interfaces.template_ci_ip_allocation.network "
+      headers:
+        Authorization: "{{ api_token_hydra }}"
+      method: GET
+      timeout: "{{ hydra_timeout }}"
+    no_log: "{{ debug }}"
+    register: hydra_template_details
+
+  - debug:
+      var: hydra_template_details.json
+      verbosity: 3
+    no_log: "{{ debug }}"
+
+  - debug:
+      var: hydra_template_details.json.result[0].logical_interfaces
+      verbosity: 3
+    no_log: "{{ debug }}"
+
+  - name: Check free IPv4 addresses in Hydra
+    uri:
+      url: "{{ api_host_hydra }}/api/{{ api_version_hydra }}/network/{{ item.template_ci_ip_allocation[0].network.id }}/ipv4_free?amount={{ vm_count }}"
+      headers:
+        Authorization: "{{ api_token_hydra }}"
+      method: GET
+      timeout: "{{ hydra_timeout }}"
+    with_items: "{{ hydra_template_details.json.result[0].logical_interfaces }} "
+    no_log: "{{ debug }}"
+    register: hydra_ipv4_free
+    ignore_errors: yes
+
+  - set_fact:
+      hydra_ipv4_free_all_nets: "{{ hydra_ipv4_free_all_nets and not item.failed }}"
+    with_items: "{{ hydra_ipv4_free.results }}"
+    no_log: "{{ debug }}"
+
+  - set_fact:
+      hydra_ipv4_exhausted_template_networks: "{% if item.failed  %}{{ hydra_ipv4_exhausted_template_networks + [item.item.template_ci_ip_allocation[0].network.name]}}{% else %}{{ hydra_ipv4_exhausted_template_networks }}{% endif %}"
+    with_items: "{{ hydra_ipv4_free.results }}"
+    no_log: "{{ debug }}"
+
+  - set_fact:
+      hydra_ipv4_exhausted_networks: "{{ hydra_ipv4_exhausted_networks + hydra_ipv4_exhausted_template_networks }}"
+    no_log: "{{ debug }}"
+
+  - set_fact:
+      templates_ok: "{{ templates_ok + [hydra_tmpl_name]}}"
+    when: hydra_ipv4_free_all_nets
+    no_log: "{{ debug }}"

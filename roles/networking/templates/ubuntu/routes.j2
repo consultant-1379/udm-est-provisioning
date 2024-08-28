@@ -1,0 +1,8 @@
+{% for item in template_routes %}
+{% if template_network_address == item.network %}
+{% for destination in item.routes %}
+post-up route add -net {{ destination.dest_network}}  netmask {{ destination.dest_mask }} gw {{ item.gateway }}
+pre-down route del -net {{ destination.dest_network}}  netmask {{ destination.dest_mask }} gw {{ item.gateway }}
+{% endfor %}
+{% endif %}
+{% endfor %}

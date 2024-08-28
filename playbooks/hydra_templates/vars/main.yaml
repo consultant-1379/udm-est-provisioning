@@ -1,0 +1,55 @@
+---
+api_version_hydra: 4.0
+hydra_timeout: 30
+hydra_templates:
+  tg:
+    seli:
+      - udm5gEST_estudm_vdc_tg_132
+      - udm5gEST_estudm_vdc_tg_143_113_120_124_119
+      - udm5gEST_estudm_vdc_tg_143_147_120_124_119
+      - udm5gEST_estudm_vdc_tg_143_147_120_124_193
+      - udm5gEST_estudm_vdc_tg_146_147_120_124_193
+      - udm5gEST_estudm_vdc_tg_150
+      - udm5gEST_estudm_vdc_tg_150_113_120_124_119
+      - udm5gEST_estudm_vdc_tg_159
+      - udm5gEST_estudm_vdc_tg_179
+      - udm5gEST_estudm_vdc_tg_181
+      - udm5gEST_estudm_vdc_tg_181_113_120_124_193
+      - udm5gEST_estudm_vdc_tg_181_193
+      - udm5gEST_estudm_vdc_tg_181_clone_4gEST
+      - udm5gEST_estudm_vdc_tg_208
+      - udm5gEST_estudm_vdc_tg_208_147_120_124_193
+      - udm5gEST_estudm_vdc_tg_282_147_120_124_119
+      - udm5gEST_estudm_vdc_tg_339_113_120_124_119
+      - udm5gEST_estudm_vdc_tg_339_147_120_124_193
+      - udm5gEST_shared_vdc_tg_122
+      - udm5gEST_shared_vdc_tg_134
+      - udm5gEST_shared_vdc_tg_339_113_120_124_119
+  
+    sero:
+      - udm5gEST_sero_estudm_vdc_tg_450
+  vm:
+    seli:
+      - udm5gEST_shared_vdc_137
+      - udm5gEST_shared_vdc_339
+      - udm5gEST_shared_vdc_122
+      - udm5gEST_shared_vdc_134
+      - udm5gEST_shared_vdc_113
+      - udm5gEST_estudm_vdc_132
+      - udm5gEST_shared_vdc_282
+      - udm5gEST_estudm_vdc_143
+      - udm5gEST_estudm_vdc_142
+      - udm5gEST_estudm_vdc_282
+      - udm5gEST_estudm_vdc_113
+      - udm5gEST_estudm_vdc_137
+      - udm5gEST_estudm_vdc_146
+      - udm5gEST_estudm_vdc_339
+      - udm5gEST_estudm_vdc_150
+      - udm5gEST_estudm_vdc_147
+      - udm5gEST_estudm_vdc_159
+      - udm5gEST_estudm_vdc_179
+      - udm5gEST_estudm_vdc_181
+      - udm5gEST_estudm_vdc_189
+      - udm5gEST_estudm_vdc_208
+    sero:
+      - udm5gEST_estudm_vdc_450

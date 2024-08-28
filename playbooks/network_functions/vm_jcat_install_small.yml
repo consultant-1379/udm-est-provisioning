@@ -1,0 +1,109 @@
+---
+- name: JCAT Install
+  hosts: all
+  gather_facts: yes
+  vars:
+    vnc_password: password
+    eclipse_home: /JCAT
+    atlas_client_version: "UC19W08"
+    atlas_client_home:    "/atlas_client"
+
+  tasks:
+
+# Java
+
+    - name: Install Java
+      zypper:
+        name: java
+        state: present
+
+# Git
+
+    - name: Install Git
+      zypper:
+        name: git
+        state: present
+
+# GTK 3
+
+    - name: Install Lib GTK 3
+      zypper:
+        name: libgtk-3-0
+        state: present
+
+# VNC installation and configuration
+
+    - name: Download python-pexpect
+      get_url:
+        url: https://arm.rnd.ki.sw.ericsson.se/artifactory/proj-e3tools-external-local/4g/rpm/python-pexpect-3.3-6.1.noarch.rpm
+        dest: /tmp/python-pexpect-3.3-6.1.noarch.rpm
+
+    - zypper:
+        name: /tmp/python-pexpect-3.3-6.1.noarch.rpm
+        state: present
+        disable_gpg_check : yes
+
+
+    - name: "Install VNC packages"
+      zypper:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - xorg-x11-Xvnc
+        - python-gtk-vnc
+        - tightvnc
+
+    - name: Set Up VNC server Password
+      expect:
+        command: "vncpasswd"
+        responses:
+          (?i)Password: "{{ vnc_password }}"
+          (?i)Verify: "{{ vnc_password }}"
+      no_log: true
+
+    - name: Shutdown VNC server
+      command: "vncserver -kill :2"
+      ignore_errors: yes
+
+    - name: Startup VNC server
+      command: "vncserver :2 -geometry 1900x1100"
+      async: 15
+
+    - lineinfile:
+        path: /etc/sysconfig/displaymanage
+        regexp: '^DISPLAYMANAGER_ROOT_LOGIN_REMOTE='
+        line: 'DISPLAYMANAGER_ROOT_LOGIN_REMOTE="yes"'
+        create: yes
+
+# Eclipse Installation
+
+    - file:
+        path: "{{ eclipse_home }}"
+        state: directory
+        mode: 0777
+
+    - name: Download and unarchive Eclipse files
+      unarchive:
+        src: "https://arm.rnd.ki.sw.ericsson.se/artifactory/proj-e3tools-external-local/4g/binaries/eclipse/eclipse-jee-neon-R-linux-gtk-x86_64.tar.gz"
+        dest: "{{ eclipse_home }}"
+        extra_opts: [--strip-components=1]
+        remote_src: yes
+
+    - name: Create eclipse symbolic link in /sbin
+      file:
+        src: "{{ eclipse_home }}/eclipse"
+        dest: "/sbin/eclipse"
+        mode: 0777
+        state: link
+
+# Atlas Client Installation
+
+    - file:
+        path: "{{ atlas_client_home }}"
+        state: directory
+        mode: 0777
+
+    - name: Download Atlas Client
+      get_url:
+        url: "https://arm.rnd.ki.sw.ericsson.se/artifactory/simple/proj-jcat-release-local/hr/ericsson/jcat/univ/atlas/Atlas-client/{{ atlas_client_version }}/Atlas-client-{{ atlas_client_version }}.jar"
+        dest: "{{ atlas_client_home }}/Atlas-client-{{ atlas_client_version }}.jar"

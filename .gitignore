@@ -1,0 +1,7 @@
+*retry
+*swp
+*test.yml
+*idea.yml
+var/*_vdc_vars.yml
+var/*secret.yml
+vcd_sdk.log

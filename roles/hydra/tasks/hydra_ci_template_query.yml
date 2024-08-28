@@ -1,0 +1,82 @@
+---
+  # Task list: hydra_ci_create.yml
+  # - Depends on:
+  #   - hydra_tmpl_name
+  #   - api_token_hydra
+  #   - api_host_hydra
+  #
+  # - Provides:
+  #   - vcd_networks
+
+  - name: Find Hydra template ID from specified name
+    uri:
+      url: "{{ api_host_hydra }}/api/{{ api_version_hydra }}/template_ci/search"
+      headers:
+        Authorization: "{{ api_token_hydra }}"
+      body:
+        template_name: "{{ hydra_tmpl_name }}"
+      body_format: json
+      timeout: "{{ hydra_timeout }}"
+      method: POST
+    register: hydra_search_template
+    failed_when: (hydra_search_template.json.result | length < 1)
+
+  - debug:
+      var: hydra_search_template.json
+      verbosity: 3
+
+  - name: Extract Hydra template ID
+    set_fact:
+      ci_template_id: "{{ hydra_search_template.json.result[0].id }}"
+
+  - debug:
+      var: ci_template_id
+      verbosity: 3
+
+  - name: Obtain Hydra template network settings
+    uri:
+      url: "{{ api_host_hydra }}/api/{{ api_version_hydra }}/template_ci/{{ ci_template_id }}?expand=logical_interfaces.template_ci_ip_allocation.network "
+      headers:
+        Authorization: "{{ api_token_hydra }}"
+      timeout: "{{ hydra_timeout }}"
+      method: GET
+    register: hydra_ci_query
+
+  - debug:
+       var: hydra_ci_query.json
+       verbosity: 3
+
+  - assert:
+      that: (hydra_ci_query.json.result | length > 0)
+      msg: "NOK - got no valid response from Hydra upon instantiation!"
+
+  - set_fact:
+      vdc_networks: []
+      hydra_template_networks: []
+      interface_count: 0
+
+  - name: Extract networks from the CI template
+    set_fact:
+      interface_count: "{{ interface_count | int + 1 | int }}"
+      hydra_template_networks: "{{ hydra_template_networks + [{ 'interface_index': ( interface_count | int ), 'hydra_network_name': item.template_ci_ip_allocation[0].network.name, 'is_primary': item.template_ci_ip_allocation[0].is_primary}] }}"
+    with_items: "{{ hydra_ci_query.json.result[0].logical_interfaces }}"
+
+  - debug:
+      var: hydra_template_networks
+      verbosity: 1
+
+  - name: Assert that all the networks in the hydra template are correctly parsed to VCD Networks.
+    assert:
+      that:
+        - hydra_to_vdc [item.hydra_network_name] is defined
+      msg: "The hydra template network '{{ item.hydra_network_name }}'' cannot be parsed to an VDC network."
+    with_items: "{{ hydra_template_networks }}"
+
+  - name: Parse CI template newtorks to VDC networks.
+    set_fact:
+      vdc_networks: "{{ vdc_networks + [{ 'interface_index': ( item.interface_index | int ), 'vdc_network_name': hydra_to_vdc [item.hydra_network_name], 'is_primary': item.is_primary}] }}"
+    with_items: "{{ hydra_template_networks }}"
+
+  - debug:
+      var: vdc_networks
+      verbosity: 1

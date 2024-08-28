@@ -1,0 +1,91 @@
+---
+  - name: initialize vm_list var.
+    set_fact:
+      vm_list: []
+    when: vm_list is not defined
+
+  # Perform sanity checks (check if there is a working set to
+  # perform the rest of operations with)
+  - include_role:
+      name: generic
+      tasks_from: checks
+    when: checks_passed is not defined
+  - set_fact:
+      checks_passed: true
+
+  # Create vCloud API session and get token cookie
+  - include_role:
+      name: vmware
+      tasks_from: vmware_login
+  - assert:
+      that:
+        - vmware_login.x_vcloud_authorization != ""
+      msg: "Could not create session towards VMware vCloud API!"
+
+  # Get external data to work with:
+  # Query if specified vApp already exists
+  - include_role:
+      name: vmware
+      tasks_from: query_specific_vapp
+
+  - set_fact:
+      vapp_exists: true
+    when: query_specific_vapp_result.value != ""
+
+  - set_fact:
+      vapp_exists: false
+    when: query_specific_vapp_result.value == ""
+
+  # Get vApp details, if it exists
+  - include_role:
+      name: vmware
+      tasks_from: get_vapp_details
+    when: vapp_exists
+
+  # Get number of VMs deployed in vApp, if it exists
+  - name: Count all VMs inside vApp
+    xml:
+      path: "{{ tmp_dir }}/vapp_details.xml"
+      xpath: /n:VApp/n:Children/n:Vm
+      namespaces:
+        n: http://www.vmware.com/vcloud/v1.5
+      count: yes
+    register: vms_total
+    when: get_vapp_details is defined
+
+  - debug:
+      var: vms_total.count
+      verbosity: 3
+
+  # Recompose vApp ie add more VMs to existing vApp
+  # if current number of VMs is less than specified
+  - include_role:
+      name: update
+      tasks_from: main
+    when: ( vapp_exists ) and ( vms_total.count | int < vm_count )
+    vars:
+      logout_when_finished: false
+    with_sequence: start={{ vms_total.count | int }} end={{ vm_count - 1 if vms_total.count | int < vm_count else vms_total.count | int }} stride=1
+
+  # Instantiate vApp
+  - include_tasks: instantiate_vapp.yml
+    when: not vapp_exists
+
+  # Recompose vApp ie add more VMs (if necessary)
+  - include_role:
+      name: update
+      tasks_from: main
+    when: ( not vapp_exists ) and ( vm_count > 1 )
+    vars:
+      logout_when_finished: false
+    with_sequence: start=1 end={{ vm_count - 1 if vm_count > 1 else 1 }} stride=1
+
+  # vCloud API session logout
+  - include_role:
+      name: vmware
+      tasks_from: vmware_logout
+    when: logout_when_finished
+
+  - name: Print list of created VMs.
+    debug:
+      msg: "{{ vm_list }}"

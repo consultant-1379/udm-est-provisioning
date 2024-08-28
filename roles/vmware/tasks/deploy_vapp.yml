@@ -1,0 +1,91 @@
+---
+  # Task list: deploy_vapp.yml
+  # - Depends on:
+  #   - xml/instantiateVAppTemplateParams.xml
+  #     - query_specific_orgvdc_result
+  #     - org_network_name
+  #     - query_specific_template_result
+  #     - vapp_name
+  #
+  # - Provides: vm_href
+  #
+  # - Description:
+  #   Set of tasks necessary to instantiate vApp template.
+  #   Outputs template instantiated VM href (needed for rest of 'create' playbook operations)
+  #
+  - name: Prepare template for vApp instantiation
+    template:
+      src: "{{ playbook_dir }}/xml/instantiateVAppTemplateParams.xml"
+      dest: "{{ tmp_dir }}/instantiateVAppTemplateParams.xml"
+
+  - name: Deploy vApp
+    uri:
+      url: "{{ query_specific_orgvdc_result.value }}/action/instantiateVAppTemplate"
+      body: "{{ lookup('template', tmp_dir + '/instantiateVAppTemplateParams.xml') }}"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+        Content-Type: "application/vnd.vmware.vcloud.instantiateVAppTemplateParams+xml"
+      method: POST
+      return_content: yes
+      dest: "{{ tmp_dir }}/deploy_vapp.xml"
+      status_code: 201
+    register: deploy_vapp
+
+  - debug:
+      var: deploy_vapp.location
+      verbosity: 3
+
+  - name: Extract vApp deployment task
+    xml_read:
+      xmlfile: "{{ tmp_dir }}/deploy_vapp.xml"
+      xpath: "/n:VApp/n:Tasks/n:Task/@href"
+      namespaces: "n=http://www.vmware.com/vcloud/v1.5"
+    register: deploy_vapp_task
+    failed_when: deploy_vapp_task.value == ""
+
+  - name: Wait until vApp is deployed
+    uri:
+      url: "{{ deploy_vapp_task.value }}"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+      method: GET
+      return_content: yes
+    register: deploy_vapp_task_result
+    until: deploy_vapp_task_result.content.find("status=\"success\"") != -1
+    retries: "{{ vdc_retries }}"
+    delay: "{{ vdc_delay }}"
+
+  - name: Get vApp details
+    uri:
+      url: "{{ deploy_vapp.location }}"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+        Content-type: "application/vnd.vmware.vcloud.vApp+xml"
+      method: GET
+      return_content: yes
+      dest: "{{ tmp_dir }}/vapp_details.xml"
+    register: vapp_details
+
+   # Omitted due to amount of text
+#  - debug:
+#      var: vapp_details.content
+#      verbosity: 3
+
+  - name: Extract instantiated VM href
+    xml_read:
+      xmlfile: "{{ tmp_dir }}/vapp_details.xml"
+      xpath: "/n:VApp/n:Children/n:Vm[1]/@href"
+      namespaces: "n=http://www.vmware.com/vcloud/v1.5"
+    register: vm_href
+    failed_when: vm_href.value == ""
+
+  - debug:
+      var: vm_href.value
+      verbosity: 3
+

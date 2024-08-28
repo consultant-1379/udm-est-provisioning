@@ -1,0 +1,9 @@
+---
+default_root_password_hash: "$6$p6D/CM9X0eWx$GCbcS0Ies/kY2hX25bDHYd7LVBlL/lUZljJeXIQdXToEmbdHsg87G0F55h7MM05.HJ7TuafdXPcQXatqRyD.D1"
+
+os_version_defaults:
+  ubuntu: "16.04"
+  sles:   "15-sp1"
+  rhel:   "7"
+
+os_version: "{{ os_version_defaults[os_profile] }}"

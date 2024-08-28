@@ -1,0 +1,54 @@
+---
+  # Task list: powerOn_vm.yml
+  # - Depends on:
+  #   - vm_href
+  #
+  # - Provides:
+  #   - none
+  #
+  # - Description:
+  #   Set of tasks to power ON VM
+  #
+
+  - name: Power ON VM
+    uri:
+      url: "{{ vm_href.value }}/power/action/powerOn"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+      method: POST
+      return_content: yes
+      dest: "{{ tmp_dir }}/powerOn_vm.xml"
+      status_code: 202
+    register: powerOn_vm
+
+  - debug:
+      var: powerOn_vm.content
+      verbosity: 3
+
+  - name: Extract VM powerOn task href
+    xml_read:
+      xmlfile: "{{ tmp_dir }}/powerOn_vm.xml"
+      xpath: "/n:Task/@href"
+      namespaces: "n=http://www.vmware.com/vcloud/v1.5"
+    register: powerOn_vm_task
+
+  - debug:
+      var: powerOn_vm_task.value
+      verbosity: 3
+
+  - name: Wait until vm is powered ON
+    uri:
+      url: "{{ powerOn_vm_task.value }}"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+      method: GET
+      return_content: yes
+    register: powerOn_vm_task_result
+    until: powerOn_vm_task_result.content.find("status=\"success\"") != -1
+    retries: "{{ vdc_retries }}"
+    delay: "{{ vdc_delay }}"
+

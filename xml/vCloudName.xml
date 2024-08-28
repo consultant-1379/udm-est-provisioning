@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vcloud:Vm
+    xmlns:vcloud="http://www.vmware.com/vcloud/v1.5"
+    name="{{ vm_computer_name }}">
+    <vcloud:Description>A virtual machine</vcloud:Description>
+</vcloud:Vm>

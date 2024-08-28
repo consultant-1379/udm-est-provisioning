@@ -1,0 +1,104 @@
+---
+- name: DTG Install
+  hosts: all
+  gather_facts: yes
+  vars:
+    dtg_home: /DTG
+    dtg_version: 2.3
+    vnc_password: password
+    # vars_prompt:
+    # - name: "vnc_password"
+    #   prompt: "Enter VNC password"
+    #   private: yes
+
+  tasks:
+
+# Install Java
+
+    - name: Install Java
+      zypper:
+        name: java
+        state: present
+
+# lksctp-tools
+
+    - name: "Install lksctp-tools"
+      zypper:
+        name: lksctp-tools
+        state: present
+
+# DTG Installation
+
+    - file:
+        path: "{{ dtg_home }}"
+        state: directory
+
+    - name: Download and unarchive DTG files
+      unarchive:
+        src: https://arm.rnd.ki.sw.ericsson.se/artifactory/proj-jcat-release-local/com/ericsson/univ/test/dtg-distribution/{{ dtg_version }}/dtg-distribution-{{ dtg_version }}.tar.gz
+        dest: "{{ dtg_home }}"
+        remote_src: yes
+
+# Linux Network Tunning
+
+    - name: Linux Network Tunning
+      lineinfile:
+        path: /etc/sysctl.conf
+        state: present
+        line: "{{ item }}"
+      with_items:
+        - 'net.core.wmem_max = 12582912'
+        - 'net.core.rmem_max = 12582912'
+        - 'net.ipv4.tcp_rmem = 10240 87380 12582912'
+        - 'net.ipv4.tcp_wmem = 10240 87380 12582912'
+        - 'net.ipv4.tcp_window_scaling = 1'
+        - 'net.ipv4.tcp_timestamps = 1'
+        - 'net.ipv4.tcp_sack = 1'
+        - 'net.core.netdev_max_backlog = 5000'
+
+# VNC installation and configuration
+
+    - name: Download python-pexpect
+      get_url:
+        url: https://arm.rnd.ki.sw.ericsson.se/artifactory/proj-e3tools-external-local/4g/rpm/python-pexpect-3.3-6.1.noarch.rpm
+        dest: /tmp/python-pexpect-3.3-6.1.noarch.rpm
+
+    - zypper:
+        name: /tmp/python-pexpect-3.3-6.1.noarch.rpm
+        state: present
+        disable_gpg_check : yes
+
+
+    - name: "Install VNC packages"
+      zypper:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - xorg-x11-Xvnc
+        - python-gtk-vnc
+        - tightvnc
+
+    - name: Set Up VNC server Password
+      expect:
+        command: "vncpasswd"
+        responses:
+          (?i)Password: "{{ vnc_password }}"
+          (?i)Verify: "{{ vnc_password }}"
+      no_log: true
+
+    - name: Shutdown VNC server
+      command: "vncserver -kill :2"
+      ignore_errors: yes
+
+    - name: Startup VNC server
+      command: "vncserver :2 -geometry 1900x1100"
+      async: 15
+
+    - name: Set up displaymanage config file
+      copy:
+        content: |-
+          # This file is being maintained by Ansible.
+          # DO NOT EDIT
+          #        
+          DISPLAYMANAGER_ROOT_LOGIN_REMOTE="yes"
+        dest: /etc/sysconfig/displaymanage

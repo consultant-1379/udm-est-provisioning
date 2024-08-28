@@ -1,0 +1,76 @@
+---
+  # Task list: hydra_mac_update.yml
+  # - Depends on:
+  #   - vm_href
+  #   - vm_interface_id_hydra
+  #
+  # - Provides: none
+  #
+  # - Description:
+  #   Updates MAC address of previously created CI entry in Hydra.
+  #   This enables PXE booting in GIC lab.
+  #
+  - name: Get VM details
+    uri:
+      url: "{{ vm_href.value }}"
+      headers:
+        Accept: "application/*+xml;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+        Content-type: "application/vnd.vmware.vcloud.vm+xml"
+      timeout: "{{ hydra_timeout }}"
+      method: GET
+      dest: "{{ tmp_dir }}/vm_details.xml"
+
+  - name: Get VM details - json
+    uri:
+      url: "{{ vm_href.value }}"
+      headers:
+        Accept: "application/*+json;version=30.0"
+        x-vcloud-authorization:  "{{ vmware_login.x_vcloud_authorization }}"
+        x-vcloud-token-type:  "{{ vmware_login.x_vmware_vcloud_token_type }}"
+        Content-type: "application/vnd.vmware.vcloud.vm+json"
+      timeout: "{{ hydra_timeout }}"
+      method: GET
+    register: vm_details_json
+
+  - name: Set fact MAC Address - management
+    set_fact:
+      vm_mac_address:
+        # to_json | from_json required
+        # Ansible uses own types for strings: AnsibleUnicode and AnsibleUnsafeText. And as long as jmespath library has very strict type-checking, it fails to accept this types as string literals.
+        value: "{{ vm_details_json.json | to_json | from_json | json_query(query) }}"
+    vars:
+      query: "section[2].networkConnection | [?contains(network, 'management')].macAddress"
+
+  - name: Set fact MAC Address - mgmt
+    set_fact:
+      vm_mac_address:
+        # to_json | from_json required
+        # Ansible uses own types for strings: AnsibleUnicode and AnsibleUnsafeText. And as long as jmespath library has very strict type-checking, it fails to accept this types as string literals.
+        value: "{{ vm_details_json.json | to_json | from_json | json_query(query) }}"
+    vars:
+      query: "section[2].networkConnection | [?contains(network, 'mgmt')].macAddress"
+    when:  vm_mac_address.value is undefined or vm_mac_address.value == "" or vm_mac_address.value == []
+    
+  - debug:
+      var: vm_mac_address.value
+      verbosity: 3
+
+  - name: Update CI entry MAC address
+    uri:
+      url: "{{ api_host_hydra }}/api/{{ api_version_hydra }}/logical_interface/{{ vm_interface_id_hydra }}"
+      body:
+        mac: "{{ vm_mac_address.value[0] }}"
+      body_format: json
+      headers:
+        Authorization: "{{ api_token_hydra }}"
+      method: PUT
+      return_content: yes
+      status_code: 200
+      timeout: "{{ hydra_timeout }}"
+    register: hydra_mac_update
+
+  - debug:
+      var: hydra_mac_update.content
+      verbosity: 3

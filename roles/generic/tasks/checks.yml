@@ -1,0 +1,124 @@
+---
+  # Task list: checks.yml
+  #  - Depends on: none
+  #
+  #  - Provides: none
+  #
+  #  - Description:
+  #    Goalkeeper - tasks would fail (predictably) but let's
+  #    make sure we do not get there to find out something does not work...
+  #
+
+  # Check if running minimum Ansible version (for everything to work correctly)
+  - assert:
+      that: "ansible_version.full | version_compare('2.4', '>=')"
+      msg: "NOK - Ansible version is {{ ansible_version.full }} and requirement is >= v2.4!"
+
+  # Input data sanity checks
+  - assert:
+      that:
+        - "tmp_dir != '' "
+        - "hydra_tmpl_name != '' "
+        - "vapp_tmpl_name != '' "
+        - "vapp_name != '' "
+        - "vapp_description != '' "
+        - "os_profile in ['sles', 'ubuntu', 'rhel']"
+        - "api_host_vmware != '' "
+        - "api_host_hydra != '' "
+        - "api_host_pxe != '' "
+        - "api_user != '' "
+        - "api_password != '' "
+        - "api_token_hydra != '' "
+        - "org_name != '' "
+        - "vdc_name != '' "
+        - "vm_count > 0"
+        - "vm_count < vm_count_limit"
+        - "rosetta_owner != '' "
+        - "rosetta_team != '' "
+        - "rosetta_team_admin != '' "
+        - "rosetta_ndo != '' "
+      msg: "NOK - Not all variables are defined and/or not empty!"
+
+  - name: "Create directory {{ tmp_dir }} if it does not exist"
+    file:
+      path: "{{ tmp_dir }}"
+      state: directory
+
+  # Check working dir
+  - stat:
+      path: "{{ tmp_dir }}"
+    register: dir_check
+
+  # Check that specified file path is directory (ie it exists)
+  - assert:
+      that: dir_check.stat.isdir
+      msg: "NOK - {{ tmp_dir }} is not present!"
+
+  # TODO: maybe add option to create working dir (if does not exist)?
+
+  # Check that specified directory is readable and writeable (by current user)
+  - assert:
+      that: dir_check.stat.writeable and dir_check.stat.readable
+      msg: "NOK - {{ tmp_dir }} is either not writeable or not readable!"
+
+  # Clean working directory of any previous files
+  # TODO: make backup of files before cleaning ?
+  - find:
+      paths: "{{ tmp_dir }}"
+      file_type: file
+    register: files
+
+  - debug:
+      var: files.files
+      verbosity: 3
+
+  - file:
+      state: absent
+      path: "{{ item.path }}"
+    with_items:
+      - "{{ files.files }}"
+
+  # Check if network destinations are reachable
+  - name: Test reachability to VMware host
+    wait_for:
+      host: "{{ api_host_vmware | urlsplit('hostname') }}"
+      port: 443
+      timeout: 3
+
+  - name: Test reachability to Hydra host
+    wait_for:
+      host: "{{ api_host_hydra | urlsplit('hostname') }}"
+      port: 443
+      timeout: 3
+
+  - name: Test reachability to PXE host
+    wait_for:
+      host: "{{ api_host_pxe | urlsplit('hostname') }}"
+      port: 8000
+      timeout: 3
+
+  # Rosetta integration verifications
+
+  - name: Verify that the Rosetta client in installed
+    pip:
+      name: e3utils
+      state: present 
+
+  - name: Verify if the user exists in Rosetta and collect its groups.
+    local_action:
+      module:    e3utils_rosetta_user
+      user:      "{{ rosetta_owner }}"
+    register:    vm_owner_query
+
+  - debug:
+      var: vm_owner_query
+
+  - name: "Verify that the user {{ rosetta_owner }} belongs to the {{ rosetta_team }} Rosetta group ."
+    assert:
+      that:   
+        - "{{ vm_owner_query.result.groups | select('match',rosetta_team) | list | length }} > 0"
+
+  # - name: "Verify that the user {{ rosetta_owner }} belongs to the {{ rosetta_ndo }} Rosetta NDO."
+  #   assert:
+  #     that:
+  #       - "{{ rosetta_owner_query.result.ndo | select('match','rosetta_ndo') | list }} > 0"

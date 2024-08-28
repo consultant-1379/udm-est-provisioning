@@ -1,0 +1,43 @@
+---
+  # Task list: get_template_vm_details.yml
+  # - Depends on:
+  #   - vapp_template_details.xml
+  #
+  # - Provides:
+  #   - template_vm_name
+  #   - template_vm_href
+  #
+  # - Description:
+  #   Set of tasks to get template VM details.
+  #
+
+  - include_tasks: get_template_details.yml
+  - assert:
+      that:
+        - get_template_details.content != ""
+      msg: "Could not obtain details about vApp template!"
+
+  - name: Extract template VM name
+    xml_read:
+      xmlfile: "{{ tmp_dir }}/vapp_template_details.xml"
+      xpath: "/n:VAppTemplate/n:Children/n:Vm/@name"
+      namespaces: "n=http://www.vmware.com/vcloud/v1.5"
+    register: template_vm_name
+    failed_when: template_vm_name.value == ""
+
+  - debug:
+      var: template_vm_name.value
+      verbosity: 3
+
+  - name: Extract template VM href
+    xml_read:
+      xmlfile: "{{ tmp_dir }}/vapp_template_details.xml"
+      xpath: "/n:VAppTemplate/n:Children/n:Vm/@href"
+      namespaces: "n=http://www.vmware.com/vcloud/v1.5"
+    register: template_vm_href
+    failed_when: template_vm_href.value == ""
+
+  - debug:
+      var: template_vm_href.value
+      verbosity: 3
+

@@ -1,0 +1,68 @@
+# - Depends on:
+#   - Valid inventory
+#   - vm_networks var related to each host in the inventory:
+#
+# vm_networks:
+#   - { ip_address_v4: 10.210.183.15/25 }
+#   - { ip_address_v4: 10.139.16.146/25,    ip_address_v6: "2001:1b74:8b:8840::6/64"}
+#   - { ip_address_v4: 10.139.17.146/25,    ip_address_v6: "2001:1b74:8b:88c0::6/64" }
+#   - { ip_address_v4: 10.139.16.8/25/25,   ip_address_v6: "2001:1b74:8b:8800::6/64" }
+#   - { ip_address_v4: 10.139.17.18/25,     ip_address_v6: "2001:1b74:8b:8880::6/64" }
+#   - { ip_address_v4: 10.139.15.146/25,    ip_address_v6: "2001:1b74:8b:87c0::6/64"}
+--- 
+- name: Debug host IP addresses
+  debug:
+    var: item
+  with_items: "{{ vm_networks }}"
+
+- name: Debug host NIC interfaces
+  debug: 
+    var: item
+  with_items: "{{ ansible_interfaces | difference(['lo','docker0']) | sort }}"
+
+# The number of networks provided in the Ansible inventory and the numer of interfaces in the VM nust match.
+
+- name: Verify that the number of IP addresses and NIC interfaces match
+  assert:
+    that: "{{ vm_networks | length }} == {{ ansible_interfaces | difference(['lo','docker0']) | length }}"
+
+# Configure NIC with the IPs provided in the 
+
+- name: Generate configuration file for network interface.
+  template:
+    src: ../templates/sles/ifcfg.j2
+    dest: "/etc/sysconfig/network/ifcfg-{{ item.1 }}" 
+    owner: root
+    group: root
+    mode: 0644
+  vars: 
+    template_ip_address_ipv4:   "{{ ( item.0.ip_address_v4 | ipv4('address')) if  item.0.ip_address_v4 is defined else 'null' }}"
+    template_network_mask_ipv4: "{{ ( item.0.ip_address_v4 | ipv4('netmask')) if  item.0.ip_address_v4 is defined else 'null' }}"
+    template_ip_address_ipv6:   "{{ ( item.0.ip_address_v6 | ipv6('address')) if  item.0.ip_address_v6 is defined else 'null' }}"
+    template_network_prefix_ipv6: "{{ ( item.0.ip_address_v6 | ipv6('prefix')) if  item.0.ip_address_v6 is defined else 'null' }}"
+    network_device: "{{ item.1 }}"
+  with_together:
+    - "{{ vm_networks }}"
+    - "{{ ansible_interfaces | difference(['lo','docker0']) | sort }}"
+
+# Add routes to each interface according to the route dircionary defined in the role vars.
+
+- name: Generate route file for network interface
+  template:
+    src: ../templates/sles/ifroute.j2
+    dest: "/etc/sysconfig/network/ifroute-{{ item.1 }}" 
+    owner: root
+    group: root
+    mode: 0644
+  vars:
+    template_network_address_ipv4: "{{ ( item.0.ip_address_v4 | ipv4('network/prefix')) if  item.0.ip_address_v4 is defined else 'null' }}"
+    template_network_address_ipv6: "{{ ( item.0.ip_address_v6 | ipv6('network/prefix')) if  item.0.ip_address_v6 is defined else 'null' }}"
+    template_routes: "{{ all_routes }}"
+  with_together:
+    - "{{ vm_networks }}"
+    - "{{ ansible_interfaces | difference(['lo']) | sort }}"
+
+- name: Restart Network service.
+  systemd:
+    state: reloaded
+    name: network
